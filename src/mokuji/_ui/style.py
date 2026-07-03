@@ -11,6 +11,7 @@ from .._theme import (
     TEXT_FAINT,
     TEXT_MUTED,
     TEXT_SECONDARY,
+    WARNING,
 )
 
 APP_CSS = f"""
@@ -65,7 +66,7 @@ ViewerPane > .notice {{
 }}
 KeyGuide {{
     dock: bottom;
-    height: 1;
+    height: auto;
     background: {BG_CHROME};
     color: {TEXT_MUTED};
     padding: 0 1;
@@ -87,9 +88,11 @@ HelpScreen {{
     align: center middle;
 }}
 #help-panel {{
-    width: 60;
-    max-width: 90%;
+    width: 74;
+    max-width: 96%;
     height: auto;
+    max-height: 96%;
+    overflow-y: auto;
     background: {BG_PANEL};
     border: round {TEXT_FAINT};
     padding: 1 2;
@@ -100,8 +103,26 @@ HelpScreen {{
     text-align: center;
     margin-bottom: 1;
 }}
-#help-body {{
+#help-columns {{
+    height: auto;
+}}
+#help-left, #help-right {{
+    width: auto;
+    height: auto;
     color: {TEXT_SECONDARY};
+}}
+#help-left {{
+    margin-right: 3;
+}}
+#help-note {{
+    color: {WARNING};
+    text-align: center;
+    margin-top: 1;
+}}
+#help-close {{
+    color: {TEXT_MUTED};
+    text-align: center;
+    margin-top: 1;
 }}
 #too-small {{
     layer: overlay;

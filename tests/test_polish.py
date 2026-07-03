@@ -45,15 +45,40 @@ class TestHelpModal:
             await pilot.pause()
             assert not isinstance(app.screen, HelpScreen)
 
-    async def test_help_notes_hidden_footer(self, tmp_path):
+    async def test_help_lists_sections_with_full_descriptions(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await pilot.press("question_mark")
+            await pilot.pause()
+            left = str(app.screen.query_one("#help-left").render())
+            right = str(app.screen.query_one("#help-right").render())
+            assert "READING" in left
+            assert "TABS & HISTORY" in left
+            assert "half page down / up" in left
+            assert "FILES & TOC" in right
+            assert "SEARCH" in right
+            assert "open file / jump to heading" in right
+            close = str(app.screen.query_one("#help-close").render())
+            assert "Ctrl+g" in close
+
+    async def test_help_notes_hidden_key_guide(self, tmp_path):
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
             await pilot.press("ctrl+g")
             await pilot.press("question_mark")
             await pilot.pause()
-            content = app.screen.query_one("#help-body")
-            assert "footer hidden" in str(content.render())
+            note = app.screen.query_one("#help-note")
+            assert "key guide hidden" in str(note.render())
+
+    async def test_help_omits_hidden_note_when_guide_visible(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await pilot.press("question_mark")
+            await pilot.pause()
+            assert not app.screen.query("#help-note")
 
 
 class TestContextFooter:

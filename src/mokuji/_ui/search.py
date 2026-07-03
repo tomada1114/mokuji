@@ -9,7 +9,7 @@ from textual.binding import Binding, BindingType
 from textual.widgets import Input
 
 from .._search import find_matches
-from .footer import KeyGuide
+from .footer import KeyGuide, format_hints
 from .viewer import ViewerPane
 
 if TYPE_CHECKING:
@@ -49,13 +49,17 @@ class SearchController:
 
     @property
     def status_text(self) -> str | None:
-        """The ``match N/M · line L`` footer text, or ``None`` if inactive."""
+        """The ``match N/M · line L`` footer text plus the search keys.
+
+        Returns ``None`` if no search is active.
+        """
         if self._active is None:
             return None
         match = self._active.matches[self._active.index]
+        hints = format_hints((("n/N", "next/prev"), ("Esc", "clear")))
         return (
             f"match {self._active.index + 1}/{len(self._active.matches)}"
-            f" · line {match.line + 1}"
+            f" · line {match.line + 1} · {hints}"
         )
 
     def open_input(self) -> None:

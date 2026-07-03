@@ -211,8 +211,8 @@ class MokujiApp(App[None]):
 
     def action_help(self) -> None:
         """Open the full keybinding reference (the ``?`` key)."""
-        footer_hidden = not self.query_one(KeyGuide).display
-        self.push_screen(HelpScreen(footer_hidden=footer_hidden))
+        guide_hidden = not self.query_one(KeyGuide).display
+        self.push_screen(HelpScreen(guide_hidden=guide_hidden))
 
     def action_toggle_guide(self) -> None:
         """Show or hide the footer key guide (ctrl+g, session-scoped)."""

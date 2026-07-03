@@ -5,30 +5,85 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 from textual.binding import Binding, BindingType
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Static
+
+from .._theme import ACCENT, TEXT_FAINT, TEXT_MUTED
 
 if TYPE_CHECKING:
     from textual.app import ComposeResult
 
-HELP_TEXT = """\
-READING              NAVIGATION
-j/k   scroll         e     file tree
-d/u   half page      t     table of contents
-f/b   page           gt/gT next/prev tab
-gg/G  top/bottom     1-9gt Nth tab
-/     search         x     close tab
-n/N   next/prev      C-o/C-i back/forward
-r     reload         Enter follow link/open
-                     .     all files (tree)
+KeyRow = tuple[str, str]
+Section = tuple[str, tuple[KeyRow, ...]]
 
-Ctrl+g toggle key guide    q quit
+READING: Section = (
+    "reading",
+    (
+        ("j / k", "scroll one line"),
+        ("d / u", "half page down / up"),
+        ("f / b", "full page down / up"),
+        ("Space", "full page down"),
+        ("gg / G", "jump to top / bottom"),
+        ("r", "reload the file"),
+    ),
+)
 
-press ? or Esc to close\
-"""
+TABS_AND_HISTORY: Section = (
+    "tabs & history",
+    (
+        ("gt / gT", "next / previous tab"),
+        ("1-9 gt", "go to tab 1-9"),
+        ("x", "close current tab"),
+        ("C-o / C-i", "back / forward"),
+    ),
+)
 
-FOOTER_HIDDEN_NOTE = "footer hidden — Ctrl+g to restore"
+FILES_AND_TOC: Section = (
+    "files & toc",
+    (
+        ("e / t", "toggle files / toc pane"),
+        ("Tab", "switch tree ↔ content"),
+        ("Enter", "open file / jump to heading"),
+        ("o", "open file in a new tab"),
+        ("h / l", "collapse / expand folder"),
+        (".", "toggle non-Markdown files"),
+        ("Esc", "return to content"),
+    ),
+)
+
+SEARCH: Section = (
+    "search",
+    (
+        ("/", "open the search input"),
+        ("Enter", "jump to the first match"),
+        ("n / N", "next / previous match"),
+        ("Esc", "cancel / clear the search"),
+    ),
+)
+
+LEFT_SECTIONS: tuple[Section, ...] = (READING, TABS_AND_HISTORY)
+RIGHT_SECTIONS: tuple[Section, ...] = (FILES_AND_TOC, SEARCH)
+
+CLOSE_HINTS = (
+    f"[bold {ACCENT}]? / Esc / q[/] close this help"
+    f" [{TEXT_FAINT}]·[/] [bold {ACCENT}]Ctrl+g[/] show / hide the key guide"
+)
+
+GUIDE_HIDDEN_NOTE = "key guide hidden — press Ctrl+g to bring it back"
+
+
+def _format_section(section: Section, key_width: int) -> str:
+    title, rows = section
+    lines = [f"[bold {TEXT_MUTED}]{title.upper()}[/]"]
+    lines += [f"[bold {ACCENT}]{key.ljust(key_width)}[/]{label}" for key, label in rows]
+    return "\n".join(lines)
+
+
+def format_column(sections: tuple[Section, ...]) -> str:
+    """Render *sections* as one markup block with an aligned key column."""
+    key_width = max(len(key) for _, rows in sections for key, _ in rows) + 2
+    return "\n\n".join(_format_section(section, key_width) for section in sections)
 
 
 class HelpScreen(ModalScreen[None]):
@@ -40,19 +95,21 @@ class HelpScreen(ModalScreen[None]):
         Binding("q", "dismiss_help", "close", show=False),
     ]
 
-    def __init__(self, *, footer_hidden: bool = False) -> None:
-        """Remember whether to point out the hidden footer (req 2.7)."""
+    def __init__(self, *, guide_hidden: bool = False) -> None:
+        """Remember whether to point out the hidden key guide (req 2.7)."""
         super().__init__()
-        self._footer_hidden = footer_hidden
+        self._guide_hidden = guide_hidden
 
     def compose(self) -> ComposeResult:
-        """Lay out the bordered help panel."""
-        body = HELP_TEXT
-        if self._footer_hidden:
-            body = f"{body}\n\n{FOOTER_HIDDEN_NOTE}"
+        """Lay out the bordered help panel: title, key columns, close hints."""
         with Vertical(id="help-panel"):
             yield Static("mokuji — keys", id="help-title")
-            yield Static(body, id="help-body")
+            with Horizontal(id="help-columns"):
+                yield Static(format_column(LEFT_SECTIONS), id="help-left")
+                yield Static(format_column(RIGHT_SECTIONS), id="help-right")
+            if self._guide_hidden:
+                yield Static(GUIDE_HIDDEN_NOTE, id="help-note")
+            yield Static(CLOSE_HINTS, id="help-close")
 
     def action_dismiss_help(self) -> None:
         """Close the modal."""

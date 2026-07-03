@@ -110,6 +110,15 @@ class TestSearchJumping:
             await pilot.pause()
             assert "match 1/3" in str(footer.render())
 
+    async def test_status_line_hints_the_search_keys(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await search_for(pilot, "needle")
+            status = str(app.query_one(KeyGuide).render())
+            assert "n/N next/prev" in status
+            assert "Esc clear" in status
+
 
 class TestSmartCase:
     async def test_lowercase_query_is_case_insensitive(self, tmp_path):

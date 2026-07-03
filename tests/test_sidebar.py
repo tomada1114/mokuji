@@ -162,7 +162,7 @@ class TestMarkdownFilter:
             assert "markdown" in str(footer.render()).lower()
 
     async def test_tree_hints_mention_filter_toggle(self):
-        assert "." in TREE_HINTS
+        assert any(key == "." for key, _, _ in TREE_HINTS)
 
     async def test_expanding_dir_with_only_hidden_files_shows_placeholder(
         self, tmp_path
