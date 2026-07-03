@@ -15,6 +15,7 @@ from .._theme import SUMI_THEME
 from .footer import KeyGuide
 from .keys import KeySequenceMachine
 from .navigator import TabNavigator
+from .search import SearchController, SearchInput
 from .sidebar import FilesTree, Sidebar, SidebarMode, TocTree
 from .style import APP_CSS
 from .viewer import ViewerPane
@@ -50,6 +51,7 @@ class MokujiApp(App[None]):
         self._root = root.resolve()
         self._initial_file = initial_file.resolve() if initial_file else None
         self._navigator = TabNavigator(self)
+        self._search = SearchController(self)
         self._keys = KeySequenceMachine(
             scroll_top=lambda: self.query_one(ViewerPane).scroll_top(),
             tab_next=self._navigator.tab_next,
@@ -76,6 +78,9 @@ class MokujiApp(App[None]):
             yield Sidebar(self._root, id="sidebar")
             yield ViewerPane(id="viewer")
         yield KeyGuide(id="footer")
+        search_input = SearchInput(id="search-input", placeholder="search")
+        search_input.display = False
+        yield search_input
 
     async def on_mount(self) -> None:
         """Activate the sumi theme, focus the viewer, and open the initial file."""
@@ -149,6 +154,37 @@ class MokujiApp(App[None]):
         index = self._navigator.index_of_tab_id(event.tab.id)
         if index is not None and index != self._navigator.active_index:
             await self._navigator.switch_to(index)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Confirm the search query typed into the footer input."""
+        if event.input.id != "search-input":
+            return
+        event.stop()
+        self._search.submit(event.value)
+
+    def action_open_search(self) -> None:
+        """Open the search input over the footer (the ``/`` key)."""
+        self._search.open_input()
+
+    def action_cancel_search(self) -> None:
+        """Cancel the search input (escape while typing)."""
+        self._search.cancel_input()
+
+    def action_search_next(self) -> None:
+        """Jump to the next match (the ``n`` key)."""
+        self._search.next()
+
+    def action_search_prev(self) -> None:
+        """Jump to the previous match (the ``N`` key)."""
+        self._search.prev()
+
+    def action_dismiss_search(self) -> None:
+        """Clear search highlights and state (escape in the content pane)."""
+        self.dismiss_search()
+
+    def dismiss_search(self) -> None:
+        """Drop any active search; called on every navigation."""
+        self._search.dismiss()
 
     def action_toggle_files(self) -> None:
         """Toggle the left pane in FILES mode (req 2.1)."""

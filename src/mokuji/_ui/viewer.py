@@ -11,13 +11,16 @@ from textual.message import Message
 from textual.widgets import Markdown, Static
 
 from .._files import FileKind
+from .._theme import ACCENT_ORANGE, BG, WARNING
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from pathlib import Path
 
     from textual.widget import Widget
 
     from .._document import Document
+    from .._search import Match
 
 BINARY_NOTICE = "binary file — cannot display"
 EMPTY_NOTICE = "(empty file)"
@@ -50,6 +53,10 @@ class ViewerPane(VerticalScroll):
         Binding("space", "page_down", "page down", show=False),
         Binding("b", "page_up", "page up", show=False),
         Binding("G", "scroll_bottom", "bottom", show=False),
+        Binding("slash", "app.open_search", "search", show=False),
+        Binding("n", "app.search_next", "next match", show=False),
+        Binding("N", "app.search_prev", "previous match", show=False),
+        Binding("escape", "app.dismiss_search", "clear search", show=False),
     ]
 
     def __init__(self, *, id: str | None = None) -> None:  # noqa: A002 — Textual's own widget id parameter name
@@ -90,6 +97,38 @@ class ViewerPane(VerticalScroll):
     def action_scroll_bottom(self) -> None:
         """Jump to the end of the document (the ``G`` motion)."""
         self.scroll_end(animate=False)
+
+    def scroll_to_line(self, line: int) -> None:
+        """Scroll so *line* (0-based source line) is roughly in view."""
+        document = self.document
+        if document is None or not document.text:
+            return
+        total_lines = max(1, document.text.count("\n"))
+        target = round(line / total_lines * self.max_scroll_y)
+        self.scroll_to(y=target, animate=False)
+
+    def show_matches(self, matches: Sequence[Match], current_index: int) -> None:
+        """Highlight search matches inline (plain-text documents only)."""
+        static = self._plain_text_static()
+        if static is None or self.document is None:
+            return
+        text = Text(self.document.text)
+        for index, match in enumerate(matches):
+            color = ACCENT_ORANGE if index == current_index else WARNING
+            text.stylize(f"{BG} on {color}", match.start, match.end)
+        static.update(text)
+
+    def clear_matches(self) -> None:
+        """Remove inline search highlights (plain-text documents only)."""
+        static = self._plain_text_static()
+        if static is not None and self.document is not None:
+            static.update(Text(self.document.text))
+
+    def _plain_text_static(self) -> Static | None:
+        results = self.query(".plain-text")
+        if results:
+            return results.first(Static)
+        return None
 
     def _build_content(self, document: Document) -> Widget:
         if document.kind is FileKind.BINARY:

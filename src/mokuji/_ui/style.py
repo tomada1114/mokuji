@@ -64,4 +64,14 @@ KeyGuide {{
 KeyGuide.-error {{
     color: {ERROR};
 }}
+SearchInput {{
+    dock: bottom;
+    height: 1;
+    border: none;
+    padding: 0 1;
+    background: {BG_CHROME};
+}}
+SearchInput:focus {{
+    border: none;
+}}
 """

@@ -200,6 +200,7 @@ class TabNavigator:
     async def _render_active(
         self, *, anchor: str | None = None, restore_scroll: bool = False
     ) -> None:
+        self._app.dismiss_search()
         state = self._states[self._active]
         viewer = self._app.query_one(ViewerPane)
         await viewer.show_document(state.document)
