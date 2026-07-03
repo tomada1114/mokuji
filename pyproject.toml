@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
 ]
+dependencies = ["textual>=1.0"]
 
 [project.urls]
 Homepage = "https://github.com/tomada1114/mokuji"
@@ -30,7 +31,14 @@ Issues = "https://github.com/tomada1114/mokuji/issues"
 Changelog = "https://github.com/tomada1114/mokuji/blob/main/CHANGELOG.md"
 
 [dependency-groups]
-dev = ["mypy>=2.1.0", "pre-commit>=3.7", "pytest>=8.0", "pytest-cov>=7.1.0", "ruff>=0.11"]
+dev = [
+    "mypy>=2.1.0",
+    "pre-commit>=3.7",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.11",
+]
 docs = ["mkdocs-material>=9.7.6", "mkdocstrings[python]>=1.0.4"]
 
 # --------------------------------------------------------------------------- #
@@ -163,6 +171,7 @@ disallow_untyped_calls = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
 addopts = [
     "--strict-markers",
     "--strict-config",
