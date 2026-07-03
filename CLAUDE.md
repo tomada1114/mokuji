@@ -2,9 +2,11 @@
 
 ## Overview
 
-This is a Python library built with [uv](https://docs.astral.sh/uv/) and
-[hatchling](https://hatch.pypa.io/). It uses a strict `src/` layout with
-comprehensive type checking and linting.
+**mokuji** is a terminal (TUI) Markdown reader built with
+[Textual](https://textual.textualize.io/), packaged with
+[uv](https://docs.astral.sh/uv/) and [hatchling](https://hatch.pypa.io/).
+It uses a strict `src/` layout with comprehensive type checking and
+linting.
 
 ## Quick Reference
 
@@ -26,15 +28,37 @@ in the `justfile`.
 
 ```
 src/mokuji/
-├── __init__.py   # Public API — export everything users need here
-├── py.typed      # PEP 561 marker for typed package
-└── core.py       # Placeholder module — replace and re-export via __init__.py
+├── __init__.py    # Public API: __version__ + main only
+├── __main__.py    # `python -m mokuji`
+├── py.typed       # PEP 561 marker for typed package
+├── _cli.py        # argparse; resolves root/initial file; runs MokujiApp
+├── _errors.py     # MokujiError base + DocumentLoadError
+├── _files.py      # pure: file classification (markdown/text/binary/too-large)
+├── _document.py   # pure: Document model, heading extraction, link resolution
+├── _search.py     # pure: smart-case substring search
+├── _theme.py      # sumi color tokens + Textual Theme
+└── _ui/
+    ├── app.py        # MokujiApp: layout, bindings, event wiring
+    ├── navigator.py  # tab states, per-tab history, Tabs widget sync
+    ├── keys.py       # Vim multi-key sequence machine (gg/gt/gT/Ngt)
+    ├── search.py     # search input, match state, n/N navigation
+    ├── viewer.py     # ViewerPane: renders one document
+    ├── sidebar.py    # FILES DirectoryTree + TOC Tree
+    ├── footer.py     # KeyGuide: context hints + flash messages
+    ├── help.py       # HelpScreen modal
+    ├── style.py      # app-wide Textual CSS
+    └── tabs.py       # TabState + pure tab arithmetic/label helpers
 ```
 
+- Dependency rule: `_files`/`_document`/`_search`/`_errors` import nothing
+  from `_ui` and nothing from Textual; `_theme` may import
+  `textual.theme.Theme` only; `_ui/*` may import everything; `_cli`
+  imports `_ui.app` lazily inside `main()` (keeps `--version` fast)
 - Keep the public API surface small — export via `__init__.py.__all__`
-- Internal modules can use a leading underscore (`_internal.py`)
-- Separate concerns: one module per logical unit
-- Update `docs/reference.md` and README examples whenever you change the public API
+  (mokuji is an application: only `__version__` and `main` are public)
+- Separate concerns: one module per logical unit, under 300 lines each
+- Update `docs/reference.md` and README examples whenever you change the
+  CLI or keybindings
 
 ## Review Checklist
 

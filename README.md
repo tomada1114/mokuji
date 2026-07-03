@@ -6,121 +6,107 @@
 [![Python](https://img.shields.io/pypi/pyversions/mokuji)](https://pypi.org/project/mokuji/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A short description of what this library does.
+The most readable way to browse Markdown in your terminal.
 
-## Quickstart
-
-```bash
-pip install mokuji
-# or
-uv add mokuji
-```
-
-```python
-from mokuji import add
-
-result = add(1, 2)  # 3
-```
-
-## Design Philosophy
-
-Every choice in this template has a reason. If you disagree with a decision,
-you know exactly what to change and why it was there in the first place.
-
-### Why `src/` layout?
-
-The `src/` layout prevents accidental imports of the local package during
-development and testing. It ensures that tests always run against the
-*installed* version, catching packaging errors before they reach users.
-
-### Why strict mypy + comprehensive Ruff rules?
-
-Type errors and lint issues are cheapest to fix at write time. Strict settings
-from day one mean every line of code is held to the same standard — there is
-never a "legacy" codebase to clean up. LLMs generating code also benefit from
-strict rules: they produce higher-quality output when constraints are clear.
-
-### Why zero runtime dependencies?
-
-A library template should not impose opinions about logging, HTTP clients, or
-data validation. You add what you need. Starting from zero keeps the dependency
-tree small and avoids conflicts with downstream users.
-
-### Why Just over Make?
-
-Just has cleaner syntax (no mandatory tabs), better cross-platform support, and
-more readable recipe definitions. It is a task runner, not a build system —
-which is exactly what a Python project needs.
-
-### Why CLAUDE.md?
-
-AI-assisted development is the norm, not the exception. `CLAUDE.md` gives LLMs
-the context they need to generate code that matches your project's standards,
-architecture, and conventions — reducing review cycles.
-
-### Why 80% coverage minimum?
-
-80% is high enough to catch most regressions but low enough to avoid
-test-for-the-sake-of-testing. Branch coverage is enabled, so conditional logic
-is meaningfully tested.
-
-## Using This Template
-
-1. Click **"Use this template"** on GitHub (or clone and remove `.git`)
-2. Run `scripts/bootstrap.py` to rename the package and replace placeholders:
-
-   ```bash
-   uv run python scripts/bootstrap.py my-cool-lib \
-     --author "Jane Doe" --email jane@example.com --github-user janedoe
-   uv lock
-   ```
-
-   This renames `src/mokuji` to `src/my_cool_lib` and replaces
-   `mokuji`, `mokuji`, `tomada1114`, `tomada`, and
-   `tmasuyama1114@gmail.com` across all tracked files (`uv.lock` is skipped —
-   run `uv lock` afterward to regenerate it). `--author`, `--email`, and
-   `--github-user` are optional; any omitted placeholder is left as-is.
-3. Update `pyproject.toml` metadata (description, URLs) beyond what the
-   script covers
-4. Update `README.md`, `SECURITY.md`, and `CLAUDE.md`
-5. Replace the placeholder implementation and keep `src/<your_package>/__init__.py`,
-   `docs/reference.md`, and the usage examples in sync with your public API
-6. Create a `CODECOV_TOKEN` repository secret (from [codecov.io](https://codecov.io))
-   so the CI coverage upload step can authenticate
-7. Note: the [OpenSSF Scorecard](https://github.com/ossf/scorecard) workflow
-   (`.github/workflows/scorecard.yml`) only runs successfully on public
-   repositories; it will fail on private repos
-
-To find any placeholders the script left untouched (e.g. because an
-optional argument was omitted):
+**mokuji** (目次, "table of contents") is a terminal Markdown reader built
+with [Textual](https://textual.textualize.io/). It is not an editor — it
+does one thing: make reading a repository's documentation a first-class,
+beautiful experience.
 
 ```bash
-rg -n "tomada1114|mokuji|mokuji|tomada|you@example" .
+uvx mokuji            # browse the current repository
 ```
+
+## Features
+
+- **Repository as a book** — a file tree, tabs, internal-link following,
+  per-tab jump history, and a table of contents turn a repo's Markdown
+  into a navigable document set.
+- **Always-visible key guide** — a context-aware footer shows the keys
+  that work right now; `?` opens the full reference. Zero learning curve
+  despite Vim keys.
+- **Readability-first rendering** — a centered content column capped at
+  96 cells, and one meticulously designed dark theme (`sumi`, derived
+  from Tokyo Night).
+- **In-file search** — `/` with smart case, `n`/`N` navigation, and match
+  highlighting.
+- Non-Markdown files open read-only as plain text; binary and oversized
+  files are handled gracefully.
+
+## Install
+
+```bash
+uv tool install mokuji    # or: pipx install mokuji / pip install mokuji
+```
+
+Or run it without installing:
+
+```bash
+uvx mokuji
+```
+
+## Usage
+
+| Invocation | Behavior |
+|------------|----------|
+| `mokuji` | Browse the current working directory |
+| `mokuji <dir>` | Browse `<dir>` |
+| `mokuji <file.md>` | Browse the file's directory with the file open |
+| `mokuji --version` | Print version and exit |
+| `mokuji --help` | Print usage and exit |
+
+## Keys
+
+| Key | Context | Action |
+|-----|---------|--------|
+| `j` / `k` | content | scroll one line |
+| `d` / `u` | content | half page down / up |
+| `f` / `Space` / `b` | content | full page down / down / up |
+| `gg` / `G` | content | top / bottom |
+| `e` | global | toggle FILES pane |
+| `t` | global | toggle TOC pane |
+| `Tab` | global | cycle focus tree ↔ content |
+| `Enter` | tree | open file / expand directory |
+| `o` | tree | open file in a new tab |
+| `Enter` | TOC | jump to heading |
+| `gt` / `gT` / `<N>gt` | global | next / previous / Nth tab |
+| `x` | global | close tab |
+| `Ctrl+o` / `Ctrl+i` | content | history back / forward |
+| `/` | content | search in file |
+| `n` / `N` | content | next / previous match (wraps) |
+| `r` | content | reload file, keeping scroll position |
+| `?` | global | help (also closes it; `Esc` too) |
+| `Ctrl+g` | global | toggle the footer key guide |
+| `q` | global | quit |
+
+## Known Limitations
+
+- **Search highlighting in Markdown**: rendered Markdown has no public
+  API for inline highlights, so mokuji jumps to matches and shows a
+  `match N/M · line L` counter in the footer instead. Plain-text files
+  get full inline highlighting.
+- **Link following is mouse-driven**: Textual's Markdown widget has no
+  per-link keyboard focus, so links are followed by clicking them.
+  Keyboard navigation covers everything else.
+- **`Ctrl+i` aliases `Tab`** in terminals without an extended keyboard
+  protocol; history-forward needs a terminal that distinguishes them
+  (e.g. Kitty protocol support).
+- Platforms: macOS and Linux; Windows Terminal is untested.
 
 ## Development
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
 
 ```bash
-uv sync --all-groups
-# Optional but recommended when working in a Git checkout
-uv run pre-commit install --install-hooks
-just check
+just install   # dependencies + git hooks
+just check     # format, lint, type check, tests
+just smoke     # build the wheel and verify it in a temp venv
 ```
-
-`just install` installs pre-commit hooks automatically when the project lives in
-a Git repository and skips that step for "Use this template" bootstrap copies
-before Git is initialized.
-
-For packaging verification, run `just smoke` (or `uv build && uv run python scripts/smoke_test.py`)
-to install the freshly built wheel into a temporary virtual environment and
-confirm the distribution imports from the wheel, not from `src/`.
 
 ## Documentation
 
 - [Getting Started](https://tomada1114.github.io/mokuji/getting-started/)
-- [API Reference](https://tomada1114.github.io/mokuji/reference/)
+- [Reference](https://tomada1114.github.io/mokuji/reference/)
 
 ## License
 

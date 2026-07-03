@@ -7,8 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-02
+
 ### Added
 
+- **mokuji**, a readability-first terminal Markdown reader built with
+  Textual:
+    - Markdown reading view with a centered 96-cell content column and
+      the `sumi` dark theme (Tokyo Night derived)
+    - FILES pane: repository tree with `.git` hidden, non-Markdown
+      entries dimmed, plain-text/binary/oversized-file handling
+    - TOC pane built from H1–H4 headings with jump-to-heading
+    - Tabs with Vim semantics (`o`, `gt`/`gT`/`<N>gt`, `x`), duplicate
+      detection, and per-tab scroll positions
+    - Internal/external link following with per-tab jump history
+      (`Ctrl+o`/`Ctrl+i`)
+    - In-file smart-case search (`/`, `n`/`N`) with inline highlights for
+      plain text and a match counter for Markdown
+    - Context-aware footer key guide (`Ctrl+g` toggles), footer flash
+      feedback, help modal (`?`), manual reload (`r`), and
+      narrow/tiny-terminal handling
+    - `mokuji` CLI: directory or file argument, `--version`, exit code 1
+      with a stderr message for invalid paths
 - Initial project structure
 - `scripts/bootstrap.py` deterministic template initializer: renames the
   package and replaces every placeholder (`mokuji`, `mokuji`,
@@ -53,4 +73,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Switched to PEP 639 license metadata (`license-files`, dropped the
   redundant OSI trove classifier)
 
-[Unreleased]: https://github.com/tomada1114/mokuji/commits/main
+[Unreleased]: https://github.com/tomada1114/mokuji/compare/v0.1.0...main
+[0.1.0]: https://github.com/tomada1114/mokuji/commits/main
