@@ -23,6 +23,9 @@ classifiers = [
 ]
 dependencies = ["textual>=1.0"]
 
+[project.scripts]
+mokuji = "mokuji._cli:main"
+
 [project.urls]
 Homepage = "https://github.com/tomada1114/mokuji"
 Documentation = "https://tomada1114.github.io/mokuji"
