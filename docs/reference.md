@@ -15,6 +15,9 @@ mokuji is an application, not a library: its public Python surface is the
 
 `python -m mokuji` behaves identically.
 
+On launch the FILES tree has focus, ready to pick a file with `j`/`k`
+and `Enter`; when a file is given, the content pane has focus instead.
+
 ### Exit codes
 
 | Code | Meaning |
@@ -41,7 +44,7 @@ mokuji is an application, not a library: its public Python surface is the
 | `e` | toggle FILES pane (focus moves into the tree) |
 | `t` | toggle TOC pane |
 | `Tab` | cycle focus tree ↔ content |
-| `Enter` (tree) | open file / expand directory |
+| `Enter` (tree) | open file (focus moves to content) / expand directory |
 | `o` (tree) | open file in a new tab |
 | `h` / `l` (tree) | collapse / expand directory |
 | `.` (tree) | toggle non-Markdown files (hidden by default) |

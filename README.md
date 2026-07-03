@@ -67,7 +67,7 @@ uvx mokuji
 | `e` | global | toggle FILES pane |
 | `t` | global | toggle TOC pane |
 | `Tab` | global | cycle focus tree ↔ content |
-| `Enter` | tree | open file / expand directory |
+| `Enter` | tree | open file (focus moves to content) / expand directory |
 | `o` | tree | open file in a new tab |
 | `.` | tree | toggle non-Markdown files (hidden by default) |
 | `Enter` | TOC | jump to heading |
