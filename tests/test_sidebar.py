@@ -124,6 +124,26 @@ class TestPaneToggle:
             await pilot.press("tab")
             assert isinstance(app.focused, ViewerPane)
 
+    async def test_tab_into_tree_shows_the_cursor_immediately(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            tree = app.query_one(FilesTree)
+            tree.cursor_line = -1
+            await pilot.press("tab")
+            assert isinstance(app.focused, FilesTree)
+            assert tree.cursor_line == 0
+
+    async def test_toc_opens_with_the_cursor_visible(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await pilot.press("t")
+            await pilot.pause()
+            toc = app.query_one(TocTree)
+            assert isinstance(app.focused, TocTree)
+            assert toc.cursor_line == 0
+
 
 class TestMarkdownFilter:
     async def test_tree_hides_non_markdown_files_by_default(self, tmp_path):
@@ -267,6 +287,18 @@ class TestOpeningFiles:
             await pilot.pause()
             assert app.query_one(Markdown) is not None
 
+    async def test_enter_opens_file_and_focuses_viewer(self, tmp_path):
+        make_workspace(tmp_path)
+        (tmp_path / "guide.md").write_text("# Guide\n", encoding="utf-8")
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await open_from_tree(pilot, app, "guide.md")
+            viewer = app.query_one(ViewerPane)
+            assert viewer.document is not None
+            assert viewer.document.path.name == "guide.md"
+            assert isinstance(app.focused, ViewerPane)
+
     async def test_unreadable_file_flashes_permission_denied(self, tmp_path):
         make_workspace(tmp_path)
         secret = tmp_path / "secret.md"
@@ -278,6 +310,7 @@ class TestOpeningFiles:
             await open_from_tree(pilot, app, "secret.md")
             footer = app.query_one(KeyGuide)
             assert "permission denied" in str(footer.render())
+            assert isinstance(app.focused, FilesTree)
         secret.chmod(0o644)
 
 

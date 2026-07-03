@@ -78,6 +78,9 @@ class MokujiApp(App[None]):
         """Lay out the tab bar, sidebar, viewer, and footer key guide."""
         tabs = Tabs(id="tabs")
         tabs.display = False
+        # Keep Tab strictly a tree <-> content toggle; the bar itself is
+        # driven by gt/gT and mouse clicks, so it never needs focus.
+        tabs.can_focus = False
         yield tabs
         with Horizontal(id="main"):
             yield Sidebar(self._root, id="sidebar")
@@ -91,14 +94,19 @@ class MokujiApp(App[None]):
         yield too_small
 
     async def on_mount(self) -> None:
-        """Activate the sumi theme, focus the viewer, and open the initial file."""
+        """Activate the sumi theme, open the initial file, and set focus.
+
+        With a file open the viewer gets focus (start reading); without one
+        the FILES tree does, so a file can be picked without pressing Tab.
+        """
         self.register_theme(SUMI_THEME)
         self.theme = "sumi"
-        self.query_one(ViewerPane).focus()
         if self._initial_file is not None:
+            self.query_one(ViewerPane).focus()
             await self.open_path(self._initial_file)
         else:
             await self.query_one(ViewerPane).show_empty()
+            self.query_one(FilesTree).focus()
 
     def on_resize(self, event: events.Resize) -> None:
         """Auto-collapse the sidebar on narrow terminals (req 2.1)."""
@@ -110,6 +118,8 @@ class MokujiApp(App[None]):
         self._narrow = narrow
         sidebar = self.query_one(Sidebar)
         sidebar.remove_class("-overlay")
+        if narrow and sidebar.has_focus_within:
+            self.query_one(ViewerPane).focus()
         sidebar.display = not narrow
 
     def on_key(self, event: events.Key) -> None:
@@ -124,9 +134,16 @@ class MokujiApp(App[None]):
     async def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected
     ) -> None:
-        """Open a file chosen in the FILES tree."""
+        """Open a file chosen in the FILES tree and move focus to it.
+
+        Focus only moves when the file actually became the active document,
+        so a failed open (e.g. permission denied) leaves the tree focused.
+        """
         event.stop()
         await self.open_path(event.path)
+        document = self._navigator.active_document
+        if document is not None and document.path == event.path.resolve():
+            self.query_one(ViewerPane).focus()
 
     async def on_files_tree_open_in_new_tab(
         self, event: FilesTree.OpenInNewTab

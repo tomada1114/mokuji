@@ -73,6 +73,18 @@ class TestTabLifecycle:
             await pilot.pause()
             await press_o_on(pilot, app, "script.py")
             assert app.tab_count == 2
+
+    async def test_tab_bar_stays_out_of_the_focus_cycle(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await press_o_on(pilot, app, "script.py")
+            assert app.query_one(Tabs).display
+            app.query_one(ViewerPane).focus()
+            await pilot.press("tab")
+            assert isinstance(app.focused, FilesTree)
+            await pilot.press("tab")
+            assert isinstance(app.focused, ViewerPane)
             assert app.active_tab_index == 1
             viewer = app.query_one(ViewerPane)
             assert viewer.document is not None

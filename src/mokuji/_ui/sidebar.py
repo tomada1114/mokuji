@@ -74,6 +74,15 @@ class FilesTree(DirectoryTree):
         super().__init__(path, id=id)
         self.show_all = False
 
+    def on_focus(self) -> None:
+        """Land the cursor on the first line so focus is visible immediately.
+
+        A fresh Tree has no cursor (``cursor_line == -1``) until a key or
+        click moves it, which makes tabbing into the pane look like a no-op.
+        """
+        if self.cursor_line == -1:
+            self.cursor_line = 0
+
     def action_open_new_tab(self) -> None:
         """Post a request to open the cursor file in a new tab."""
         node = self.cursor_node
@@ -164,6 +173,14 @@ class TocTree(Tree[Heading]):
         super().__init__("TOC", id="toc-tree")
         self.show_root = False
         self.guide_depth = 2
+
+    def on_focus(self) -> None:
+        """Land the cursor on the first line so focus is visible immediately.
+
+        Same rationale as :meth:`FilesTree.on_focus`.
+        """
+        if self.cursor_line == -1:
+            self.cursor_line = 0
 
     def set_document(self, document: Document | None) -> None:
         """Rebuild the heading list for *document* (or a placeholder)."""

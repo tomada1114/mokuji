@@ -5,6 +5,7 @@ from __future__ import annotations
 from textual.widgets import Markdown
 
 from mokuji._ui.app import MokujiApp
+from mokuji._ui.sidebar import FilesTree
 from mokuji._ui.viewer import ViewerPane
 
 LONG_DOCUMENT = "# Title\n\n" + "\n\n".join(f"paragraph {i}" for i in range(120)) + "\n"
@@ -42,6 +43,17 @@ class TestLaunch:
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
             assert isinstance(app.focused, ViewerPane)
+
+    async def test_files_tree_focused_with_cursor_when_launched_without_file(
+        self, tmp_path
+    ):
+        (tmp_path / "README.md").write_text(LONG_DOCUMENT, encoding="utf-8")
+        app = MokujiApp(root=tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            tree = app.query_one(FilesTree)
+            assert app.focused is tree
+            assert tree.cursor_line == 0
 
 
 class TestScrolling:
