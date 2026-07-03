@@ -25,6 +25,8 @@ uvx mokuji            # browse the current repository
 - **Always-visible key guide** — a context-aware footer shows the keys
   that work right now; `?` opens the full reference. Zero learning curve
   despite Vim keys.
+- **Welcome tour** — the first launch opens a five-page tour ending in a
+  hands-on tutorial document; replay it any time with `?` then `w`.
 - **Readability-first rendering** — a centered content column capped at
   96 cells, and one meticulously designed dark theme (`sumi`, derived
   from Tokyo Night).
@@ -67,8 +69,7 @@ uvx mokuji
 | `e` | global | toggle FILES pane |
 | `t` | global | toggle TOC pane |
 | `Tab` | global | cycle focus tree ↔ content |
-| `Enter` | tree | open file (focus moves to content) / expand directory |
-| `o` | tree | open file in a new tab |
+| `Enter` | tree | open file in a new tab (focus moves to content) / expand directory |
 | `.` | tree | toggle non-Markdown files (hidden by default) |
 | `Enter` | TOC | jump to heading |
 | `gt` / `gT` / `<N>gt` | global | next / previous / Nth tab |

@@ -44,8 +44,7 @@ and `Enter`; when a file is given, the content pane has focus instead.
 | `e` | toggle FILES pane (focus moves into the tree) |
 | `t` | toggle TOC pane |
 | `Tab` | cycle focus tree ↔ content |
-| `Enter` (tree) | open file (focus moves to content) / expand directory |
-| `o` (tree) | open file in a new tab |
+| `Enter` (tree) | open file in a new tab (focus moves to content) / expand directory |
 | `h` / `l` (tree) | collapse / expand directory |
 | `.` (tree) | toggle non-Markdown files (hidden by default) |
 | `Enter` (TOC) | jump to heading |
@@ -79,3 +78,21 @@ uppercase letter makes the search case-sensitive.
 | `?` | help modal (also closes it; `Esc` too) |
 | `Ctrl+g` | toggle the footer key guide |
 | `q` | quit |
+
+## Welcome tour
+
+On the very first launch mokuji opens a five-page welcome tour. It is
+shown once: a marker file under `$XDG_STATE_HOME/mokuji/` (default
+`~/.local/state/mokuji/`) records that it has been seen. To replay it at
+any time, press `?` and then `w`.
+
+| Key (in the tour) | Action |
+|-------------------|--------|
+| `l` / `→` | next page |
+| `h` / `←` | previous page |
+| `Enter` | next page; on the last page, open the hands-on tutorial |
+| `Esc` / `q` | close the tour |
+
+The last page offers to open a bundled tutorial document — a short
+Markdown file designed so every key it teaches can be practised on the
+document itself.

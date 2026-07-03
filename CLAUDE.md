@@ -36,7 +36,9 @@ src/mokuji/
 ├── _files.py      # pure: file classification (markdown/text/binary/too-large)
 ├── _document.py   # pure: Document model, heading extraction, link resolution
 ├── _search.py     # pure: smart-case substring search
+├── _state.py      # pure: first-run marker under $XDG_STATE_HOME
 ├── _theme.py      # sumi color tokens + Textual Theme
+├── tutorial.md    # bundled hands-on tutorial (opened from the tour)
 └── _ui/
     ├── app.py        # MokujiApp: layout, bindings, event wiring
     ├── navigator.py  # tab states, per-tab history, Tabs widget sync
@@ -45,20 +47,24 @@ src/mokuji/
     ├── viewer.py     # ViewerPane: renders one document
     ├── sidebar.py    # FILES DirectoryTree + TOC Tree
     ├── footer.py     # KeyGuide: context hints + flash messages
-    ├── help.py       # HelpScreen modal
+    ├── help.py       # HelpScreen modal; canonical key list (single source)
+    ├── tour.py       # TourScreen: first-run welcome carousel (help `w`)
     ├── style.py      # app-wide Textual CSS
     └── tabs.py       # TabState + pure tab arithmetic/label helpers
 ```
 
-- Dependency rule: `_files`/`_document`/`_search`/`_errors` import nothing
-  from `_ui` and nothing from Textual; `_theme` may import
+- Dependency rule: `_files`/`_document`/`_search`/`_errors`/`_state`
+  import nothing from `_ui` and nothing from Textual; `_theme` may import
   `textual.theme.Theme` only; `_ui/*` may import everything; `_cli`
   imports `_ui.app` lazily inside `main()` (keeps `--version` fast)
 - Keep the public API surface small — export via `__init__.py.__all__`
   (mokuji is an application: only `__version__` and `main` are public)
 - Separate concerns: one module per logical unit, under 300 lines each
 - Update `docs/reference.md` and README examples whenever you change the
-  CLI or keybindings
+  CLI or keybindings; the key sections in `_ui/help.py` are the single
+  source the welcome tour reuses, but `_ui/tour.py` mock art and
+  `tutorial.md` mention keys in prose — re-check both (the drift-guard
+  test in `tests/test_tour.py` fails on stale key names)
 
 ## Review Checklist
 

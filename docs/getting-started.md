@@ -28,10 +28,16 @@ cd your-project
 mokuji
 ```
 
+The first launch opens a short welcome tour — five pages covering
+reading, the sidebar, tabs, and search, ending with an offer to open a
+hands-on tutorial document. Skip it with `Esc`; replay it any time with
+`?` then `w`.
+
 The FILES pane on the left lists the Markdown files under the current
-directory (press `.` to show everything else too). Move with `j`/`k`,
-open a document with `Enter`, or open it in a new tab with `o`. Markdown
-files render with headings, code blocks, and tables; any other text file
+directory (press `.` to show everything else too). Move with `j`/`k`
+and open a document with `Enter` — every file opens in its own tab, so
+`gt`/`gT` switch between everything you have opened. Markdown files
+render with headings, code blocks, and tables; any other text file
 opens read-only as plain text.
 
 A few keys to get productive:
