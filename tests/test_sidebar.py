@@ -5,7 +5,7 @@ from __future__ import annotations
 from textual.widgets import Markdown
 
 from mokuji._ui.app import MokujiApp
-from mokuji._ui.footer import KeyGuide
+from mokuji._ui.footer import TREE_HINTS, KeyGuide
 from mokuji._ui.sidebar import FilesTree, Sidebar, SidebarMode, TocTree
 from mokuji._ui.viewer import ViewerPane
 
@@ -18,6 +18,8 @@ def make_workspace(tmp_path):
     (tmp_path / "README.md").write_text(DOCUMENT, encoding="utf-8")
     (tmp_path / "script.py").write_text("print('hi')\n", encoding="utf-8")
     (tmp_path / "blob.bin").write_bytes(b"\x00\x01\x02")
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "pic.png").write_bytes(b"\x89PNG")
     (tmp_path / ".git").mkdir()
     (tmp_path / ".git" / "config").write_text("x\n", encoding="utf-8")
     return tmp_path
@@ -41,6 +43,35 @@ async def open_from_tree(pilot, app, name):
             return
     message = f"no tree entry called {name}"
     raise AssertionError(message)
+
+
+async def expand_dir(pilot, app, name):
+    """Focus the FILES tree, expand the directory called *name*, return its node."""
+    tree = app.query_one(FilesTree)
+    tree.focus()
+    await pilot.pause()
+    for node in tree.root.children:
+        if node.data is not None and node.data.path.name == name:
+            tree.cursor_line = node.line
+            await pilot.press("l")
+            await pilot.pause()
+            await pilot.pause()
+            return node
+    message = f"no tree entry called {name}"
+    raise AssertionError(message)
+
+
+async def show_all_files(pilot, app):
+    """Focus the FILES tree and switch off the Markdown-only filter."""
+    app.query_one(FilesTree).focus()
+    await pilot.press("full_stop")
+    await pilot.pause()
+
+
+def root_names(app):
+    """Names of the entries currently listed at the tree root."""
+    tree = app.query_one(FilesTree)
+    return [node.data.path.name for node in tree.root.children if node.data is not None]
 
 
 class TestPaneToggle:
@@ -94,6 +125,90 @@ class TestPaneToggle:
             assert isinstance(app.focused, ViewerPane)
 
 
+class TestMarkdownFilter:
+    async def test_tree_hides_non_markdown_files_by_default(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            names = root_names(app)
+            assert "README.md" in names
+            assert "assets" in names
+            assert "script.py" not in names
+            assert "blob.bin" not in names
+
+    async def test_dot_toggles_all_files_visible(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await show_all_files(pilot, app)
+            names = root_names(app)
+            assert "script.py" in names
+            assert "blob.bin" in names
+            await pilot.press("full_stop")
+            await pilot.pause()
+            names = root_names(app)
+            assert "script.py" not in names
+            assert "blob.bin" not in names
+
+    async def test_dot_toggle_flashes_footer_message(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            footer = app.query_one(KeyGuide)
+            await show_all_files(pilot, app)
+            assert "all files" in str(footer.render())
+            await pilot.press("full_stop")
+            await pilot.pause()
+            assert "markdown" in str(footer.render()).lower()
+
+    async def test_tree_hints_mention_filter_toggle(self):
+        assert "." in TREE_HINTS
+
+    async def test_expanding_dir_with_only_hidden_files_shows_placeholder(
+        self, tmp_path
+    ):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            node = await expand_dir(pilot, app, "assets")
+            labels = [str(child.label) for child in node.children]
+            assert labels == ["(no markdown files)"]
+
+    async def test_expanding_truly_empty_dir_shows_placeholder(self, tmp_path):
+        make_workspace(tmp_path)
+        (tmp_path / "void").mkdir()
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            node = await expand_dir(pilot, app, "void")
+            labels = [str(child.label) for child in node.children]
+            assert labels == ["(empty)"]
+
+    async def test_expanding_dir_with_markdown_gets_no_placeholder(self, tmp_path):
+        make_workspace(tmp_path)
+        (tmp_path / "docs").mkdir()
+        (tmp_path / "docs" / "guide.md").write_text("# Guide\n", encoding="utf-8")
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            node = await expand_dir(pilot, app, "docs")
+            labels = [str(child.label) for child in node.children]
+            assert labels == ["guide.md"]
+
+    async def test_placeholder_enter_is_a_noop(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            viewer = app.query_one(ViewerPane)
+            before = viewer.document
+            node = await expand_dir(pilot, app, "assets")
+            tree = app.query_one(FilesTree)
+            tree.cursor_line = node.children[0].line
+            await pilot.press("enter")
+            await pilot.pause()
+            assert viewer.document is before
+
+
 class TestOpeningFiles:
     async def test_markdown_file_renders_markdown(self, tmp_path):
         app = make_app(tmp_path)
@@ -106,6 +221,7 @@ class TestOpeningFiles:
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
+            await show_all_files(pilot, app)
             await open_from_tree(pilot, app, "script.py")
             viewer = app.query_one(ViewerPane)
             assert viewer.document is not None
@@ -118,6 +234,7 @@ class TestOpeningFiles:
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
+            await show_all_files(pilot, app)
             await open_from_tree(pilot, app, "blob.bin")
             notice = app.query_one(".notice")
             assert "binary file" in str(notice.render())
@@ -194,6 +311,7 @@ class TestToc:
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
+            await show_all_files(pilot, app)
             await open_from_tree(pilot, app, "script.py")
             await pilot.press("t")
             await pilot.pause()

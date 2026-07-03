@@ -21,6 +21,7 @@ gg/G  top/bottom     1-9gt Nth tab
 /     search         x     close tab
 n/N   next/prev      C-o/C-i back/forward
 r     reload         Enter follow link/open
+                     .     all files (tree)
 
 Ctrl+g toggle key guide    q quit
 

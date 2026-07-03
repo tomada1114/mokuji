@@ -135,6 +135,11 @@ class MokujiApp(App[None]):
         event.stop()
         await self.open_in_new_tab(event.path)
 
+    def on_files_tree_filter_toggled(self, event: FilesTree.FilterToggled) -> None:
+        """Flash the new tree filter state (the ``.`` key)."""
+        event.stop()
+        self.flash("showing all files" if event.show_all else "markdown files only")
+
     def on_tree_node_selected(self, event: Tree.NodeSelected[Heading]) -> None:
         """Jump to the heading chosen in the TOC tree."""
         if not isinstance(event.control, TocTree):

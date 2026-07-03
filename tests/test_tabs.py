@@ -24,6 +24,9 @@ async def press_o_on(pilot, app, name):
     tree = app.query_one(FilesTree)
     tree.focus()
     await pilot.pause()
+    if not tree.show_all:
+        await pilot.press("full_stop")
+        await pilot.pause()
     for node in tree.root.children:
         if node.data is not None and node.data.path.name == name:
             tree.cursor_line = node.line

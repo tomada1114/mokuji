@@ -6,6 +6,7 @@ import enum
 import os
 from typing import TYPE_CHECKING, ClassVar
 
+from rich.text import Text
 from textual.binding import Binding, BindingType
 from textual.containers import Vertical
 from textual.message import Message
@@ -19,7 +20,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from rich.style import Style
-    from rich.text import Text
     from textual.app import ComposeResult
     from textual.widgets._directory_tree import DirEntry
     from textual.widgets._tree import TreeNode
@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 
 NO_HEADINGS = "(no headings)"
 NOT_MARKDOWN = "(not a Markdown file)"
+NO_MARKDOWN_FILES = "(no markdown files)"
+EMPTY_DIRECTORY = "(empty)"
 
 _VIM_TREE_BINDINGS: list[BindingType] = [
     Binding("j", "cursor_down", "down", show=False),
@@ -44,7 +46,7 @@ class SidebarMode(enum.Enum):
 
 
 class FilesTree(DirectoryTree):
-    """Directory tree that hides ``.git`` and dims non-Markdown entries."""
+    """Directory tree that hides non-Markdown files behind a toggle."""
 
     class OpenInNewTab(Message):
         """The user asked to open the cursor file in a new tab."""
@@ -53,12 +55,24 @@ class FilesTree(DirectoryTree):
             self.path = path
             super().__init__()
 
+    class FilterToggled(Message):
+        """The Markdown-only filter was switched on or off."""
+
+        def __init__(self, show_all: bool) -> None:
+            self.show_all = show_all
+            super().__init__()
+
     BINDINGS: ClassVar[list[BindingType]] = [
         *_VIM_TREE_BINDINGS,
         Binding("h", "collapse_current", "collapse", show=False),
         Binding("l", "expand_current", "expand", show=False),
         Binding("o", "open_new_tab", "open in new tab", show=False),
+        Binding("full_stop", "toggle_filter", "toggle all files", show=False),
     ]
+
+    def __init__(self, path: Path, *, id: str | None = None) -> None:  # noqa: A002 — Textual's own widget id parameter name
+        super().__init__(path, id=id)
+        self.show_all = False
 
     def action_open_new_tab(self) -> None:
         """Post a request to open the cursor file in a new tab."""
@@ -66,24 +80,63 @@ class FilesTree(DirectoryTree):
         if node is not None and node.data is not None and node.data.path.is_file():
             self.post_message(self.OpenInNewTab(node.data.path))
 
+    async def action_toggle_filter(self) -> None:
+        """Toggle between Markdown-only and all-files views (the ``.`` key)."""
+        self.show_all = not self.show_all
+        self.post_message(self.FilterToggled(self.show_all))
+        await self.reload()
+
     def filter_paths(self, paths: Iterable[Path]) -> Iterable[Path]:
-        """Hide ``.git`` directories; everything else stays visible."""
-        return [path for path in paths if path.name != ".git"]
+        """Hide ``.git``; hide non-Markdown files unless showing all."""
+        visible = [path for path in paths if path.name != ".git"]
+        if self.show_all:
+            return visible
+        return [path for path in visible if path.is_dir() or is_markdown(path)]
 
     def render_label(
         self, node: TreeNode[DirEntry], base_style: Style, style: Style
     ) -> Text:
-        """Dim non-Markdown files and unreadable entries."""
-        label = super().render_label(node, base_style, style)
+        """Dim non-Markdown files, unreadable entries, and placeholders."""
         entry = node.data
         if entry is None:
+            label = Text(str(node.label), style=style)
+            label.stylize("dim")
             return label
+        label = super().render_label(node, base_style, style)
         path = entry.path
         is_dimmed_file = path.is_file() and not is_markdown(path)
         is_unreadable = not os.access(path, os.R_OK)
         if is_dimmed_file or is_unreadable:
             label.stylize("dim")
         return label
+
+    async def _on_tree_node_expanded(self, event: Tree.NodeExpanded[DirEntry]) -> None:
+        """Add a placeholder leaf when an expanded directory shows nothing.
+
+        The stock loader never populates a directory whose (filtered)
+        content is empty, so without this the only feedback for expanding
+        such a directory is the folder icon changing.
+        """
+        await super()._on_tree_node_expanded(event)
+        node = event.node
+        if node.children or node.data is None:
+            return
+        label = self._placeholder_label(node.data.path)
+        if label is not None:
+            node.add_leaf(label, data=None)
+
+    def _placeholder_label(self, path: Path) -> str | None:
+        if not path.is_dir():
+            return None
+        try:
+            entries = list(path.iterdir())
+        except OSError:
+            return None
+        if not entries:
+            return EMPTY_DIRECTORY
+        if any(self.filter_paths(entries)):
+            return None
+        return NO_MARKDOWN_FILES
 
     def action_collapse_current(self) -> None:
         """Collapse the cursor directory, or step to its parent."""
