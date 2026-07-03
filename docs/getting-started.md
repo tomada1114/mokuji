@@ -3,19 +3,19 @@
 ## Installation
 
 ```bash
-pip install my-package
+pip install mokuji
 ```
 
 Or with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv add my-package
+uv add mokuji
 ```
 
 ## Basic Usage
 
 ```python
-from my_package import add
+from mokuji import add
 
 result = add(1, 2)
 print(result)  # 3

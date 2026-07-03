@@ -1,9 +1,9 @@
-# my-package
+# mokuji
 
-[![CI](https://github.com/your-username/my-package/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/my-package/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/your-username/my-package/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/my-package)
-[![PyPI](https://img.shields.io/pypi/v/my-package)](https://pypi.org/project/my-package/)
-[![Python](https://img.shields.io/pypi/pyversions/my-package)](https://pypi.org/project/my-package/)
+[![CI](https://github.com/tomada1114/mokuji/actions/workflows/ci.yml/badge.svg)](https://github.com/tomada1114/mokuji/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/tomada1114/mokuji/branch/main/graph/badge.svg)](https://codecov.io/gh/tomada1114/mokuji)
+[![PyPI](https://img.shields.io/pypi/v/mokuji)](https://pypi.org/project/mokuji/)
+[![Python](https://img.shields.io/pypi/pyversions/mokuji)](https://pypi.org/project/mokuji/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A short description of what this library does.
@@ -11,13 +11,13 @@ A short description of what this library does.
 ## Quickstart
 
 ```bash
-pip install my-package
+pip install mokuji
 # or
-uv add my-package
+uv add mokuji
 ```
 
 ```python
-from my_package import add
+from mokuji import add
 
 result = add(1, 2)  # 3
 ```
@@ -75,9 +75,9 @@ is meaningfully tested.
    uv lock
    ```
 
-   This renames `src/my_package` to `src/my_cool_lib` and replaces
-   `my-package`, `my_package`, `your-username`, `Your Name`, and
-   `you@example.com` across all tracked files (`uv.lock` is skipped —
+   This renames `src/mokuji` to `src/my_cool_lib` and replaces
+   `mokuji`, `mokuji`, `tomada1114`, `tomada`, and
+   `tmasuyama1114@gmail.com` across all tracked files (`uv.lock` is skipped —
    run `uv lock` afterward to regenerate it). `--author`, `--email`, and
    `--github-user` are optional; any omitted placeholder is left as-is.
 3. Update `pyproject.toml` metadata (description, URLs) beyond what the
@@ -95,7 +95,7 @@ To find any placeholders the script left untouched (e.g. because an
 optional argument was omitted):
 
 ```bash
-rg -n "your-username|my-package|my_package|Your Name|you@example" .
+rg -n "tomada1114|mokuji|mokuji|tomada|you@example" .
 ```
 
 ## Development
@@ -119,8 +119,8 @@ confirm the distribution imports from the wheel, not from `src/`.
 
 ## Documentation
 
-- [Getting Started](https://your-username.github.io/my-package/getting-started/)
-- [API Reference](https://your-username.github.io/my-package/reference/)
+- [Getting Started](https://tomada1114.github.io/mokuji/getting-started/)
+- [API Reference](https://tomada1114.github.io/mokuji/reference/)
 
 ## License
 

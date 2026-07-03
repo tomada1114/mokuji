@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial project structure
 - `scripts/bootstrap.py` deterministic template initializer: renames the
-  package and replaces every placeholder (`my-package`, `my_package`,
-  `your-username`, `Your Name`, `you@example.com`) across tracked files
+  package and replaces every placeholder (`mokuji`, `mokuji`,
+  `tomada1114`, `tomada`, `tmasuyama1114@gmail.com`) across tracked files
 - Python 3.14 support in the CI test matrix and trove classifiers
 - `zizmor` security lint for GitHub Actions workflows, wired into both CI
   and pre-commit
@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Scoped all workflow permissions to job level, added `timeout-minutes`
   to every job, added `--locked` to every `uv sync` in CI, and disabled
   checkout credential persistence outside the docs deploy job
-- Simplified `src/my_package/__init__.py`'s version resolution to the
+- Simplified `src/mokuji/__init__.py`'s version resolution to the
   standard `importlib.metadata.version()` pattern, dropping the ~50-line
   local-pyproject-walking fallback chain
 - Replaced the bespoke `no-commit-to-main` pre-commit hook with the
@@ -53,4 +53,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Switched to PEP 639 license metadata (`license-files`, dropped the
   redundant OSI trove classifier)
 
-[Unreleased]: https://github.com/your-username/my-package/commits/main
+[Unreleased]: https://github.com/tomada1114/mokuji/commits/main

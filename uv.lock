@@ -606,7 +606,7 @@ wheels = [
 ]
 
 [[package]]
-name = "my-package"
+name = "mokuji"
 version = "0.1.0"
 source = { editable = "." }
 
