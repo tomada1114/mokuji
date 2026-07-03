@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from .._document import Document
 
 NO_HEADINGS = "(no headings)"
+NO_FILE_OPEN = "(no file open)"
 NOT_MARKDOWN = "(not a Markdown file)"
 NO_MARKDOWN_FILES = "(no markdown files)"
 EMPTY_DIRECTORY = "(empty)"
@@ -185,7 +186,10 @@ class TocTree(Tree[Heading]):
     def set_document(self, document: Document | None) -> None:
         """Rebuild the heading list for *document* (or a placeholder)."""
         self.clear()
-        if document is None or document.kind is not FileKind.MARKDOWN:
+        if document is None:
+            self.root.add_leaf(NO_FILE_OPEN)
+            return
+        if document.kind is not FileKind.MARKDOWN:
             self.root.add_leaf(NOT_MARKDOWN)
             return
         if not document.headings:

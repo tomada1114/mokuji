@@ -352,6 +352,17 @@ class TestToc:
             labels = [str(node.label) for node in toc.root.children]
             assert labels == ["(not a Markdown file)"]
 
+    async def test_toc_without_open_file_shows_placeholder(self, tmp_path):
+        make_workspace(tmp_path)
+        app = MokujiApp(root=tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await pilot.press("t")
+            await pilot.pause()
+            toc = app.query_one(TocTree)
+            labels = [str(node.label) for node in toc.root.children]
+            assert labels == ["(no file open)"]
+
     async def test_toc_without_headings_shows_placeholder(self, tmp_path):
         make_workspace(tmp_path)
         bare = tmp_path / "bare.md"
