@@ -7,11 +7,14 @@ from typing import TYPE_CHECKING, ClassVar
 from rich.text import Text
 from textual.binding import Binding, BindingType
 from textual.containers import VerticalScroll
+from textual.message import Message
 from textual.widgets import Markdown, Static
 
 from .._files import FileKind
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from textual.widget import Widget
 
     from .._document import Document
@@ -29,7 +32,15 @@ def too_large_notice(size: int) -> str:
 class ViewerPane(VerticalScroll):
     """Scrollable reading column showing the active tab's document."""
 
+    class ConfirmLarge(Message):
+        """The user confirmed loading a file over the size limit."""
+
+        def __init__(self, path: Path) -> None:
+            self.path = path
+            super().__init__()
+
     BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("enter", "confirm_large", "confirm load", show=False),
         Binding("j", "scroll_down", "scroll down", show=False),
         Binding("k", "scroll_up", "scroll up", show=False),
         Binding("d", "half_page_down", "half page down", show=False),
@@ -62,6 +73,12 @@ class ViewerPane(VerticalScroll):
     def action_half_page_up(self) -> None:
         """Scroll half a viewport towards the top."""
         self.scroll_relative(y=-(self.container_size.height // 2), animate=False)
+
+    def action_confirm_large(self) -> None:
+        """Ask the app to load the pending too-large document."""
+        document = self.document
+        if document is not None and document.kind is FileKind.TOO_LARGE:
+            self.post_message(self.ConfirmLarge(document.path))
 
     def action_scroll_bottom(self) -> None:
         """Jump to the end of the document (the ``G`` motion)."""
