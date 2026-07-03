@@ -80,6 +80,19 @@ class TestLoadDocument:
         assert document.kind is FileKind.TEXT
         assert "�" in document.text
 
+    def test_read_failure_after_classify_raises_chained_error(
+        self, tmp_path, monkeypatch
+    ):
+        path = _write_md(tmp_path, "gone.md", "# hi\n")
+
+        def _fail(_self):
+            raise PermissionError(13, "denied")
+
+        monkeypatch.setattr(type(path), "read_bytes", _fail)
+        with pytest.raises(DocumentLoadError, match=r"gone\.md") as excinfo:
+            load_document(path)
+        assert isinstance(excinfo.value.__cause__, OSError)
+
     def test_empty_markdown_file_has_no_headings(self, tmp_path):
         path = _write_md(tmp_path, "empty.md", "")
         document = load_document(path)
@@ -112,6 +125,11 @@ class TestHeadingExtraction:
         text = "# real\n```\n# fake\n```\n~~~\n# also fake\n~~~\n## real too\n"
         document = load_document(_write_md(tmp_path, "d.md", text))
         assert [h.text for h in document.headings] == ["real", "real too"]
+
+    def test_mismatched_fence_marker_does_not_close_block(self, tmp_path):
+        text = "```\n~~~\n# still fenced\n```\n# real\n"
+        document = load_document(_write_md(tmp_path, "d.md", text))
+        assert [h.text for h in document.headings] == ["real"]
 
     def test_hash_without_space_is_not_a_heading(self, tmp_path):
         document = load_document(_write_md(tmp_path, "d.md", "#nope\n# yes\n"))
