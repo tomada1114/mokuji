@@ -45,7 +45,7 @@ A few keys to get productive:
 
 !!! tip
     The footer always shows the keys that work in the focused pane. If
-    you hide it with ++ctrl+g++, the help modal reminds you how to bring
+    you hide it with `Ctrl+g`, the help modal reminds you how to bring
     it back.
 
 ## What's Next?
