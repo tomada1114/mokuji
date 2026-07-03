@@ -1,19 +1,22 @@
-"""Application shell for mokuji."""
+"""Application shell for mokuji: layout, bindings, and event wiring."""
 
 from __future__ import annotations
 
+import webbrowser
 from typing import TYPE_CHECKING, ClassVar
 
 from textual.app import App
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal
-from textual.widgets import DirectoryTree, Input, Markdown, Tree
+from textual.widgets import DirectoryTree, Input, Markdown, Tabs, Tree
 
-from .._document import load_document
-from .._errors import DocumentLoadError
-from .._theme import ACCENT, BG_CHROME, BG_PANEL, ERROR, SUMI_THEME, TEXT_MUTED
+from .._document import ExternalLink, InternalLink, resolve_link
+from .._theme import SUMI_THEME
 from .footer import KeyGuide
-from .sidebar import Sidebar, SidebarMode, TocTree
+from .keys import KeySequenceMachine
+from .navigator import TabNavigator
+from .sidebar import FilesTree, Sidebar, SidebarMode, TocTree
+from .style import APP_CSS
 from .viewer import ViewerPane
 
 if TYPE_CHECKING:
@@ -24,78 +27,21 @@ if TYPE_CHECKING:
 
     from .._document import Heading
 
-
-_COUNT_DIGITS = frozenset("123456789")
-
 NARROW_WIDTH = 80
 
 
 class MokujiApp(App[None]):
     """The mokuji TUI application."""
 
-    CSS = f"""
-    Screen {{
-        background: $background;
-        layers: base overlay;
-    }}
-    #main {{
-        height: 1fr;
-    }}
-    Sidebar {{
-        width: 28;
-        min-width: 20;
-        background: {BG_PANEL};
-        border-left: wide {BG_PANEL};
-    }}
-    Sidebar:focus-within {{
-        border-left: wide {ACCENT};
-    }}
-    Sidebar.-overlay {{
-        layer: overlay;
-        dock: left;
-        height: 100%;
-    }}
-    #sidebar-title {{
-        height: 1;
-        padding: 0 1;
-        color: {TEXT_MUTED};
-        text-style: bold;
-        background: {BG_PANEL};
-    }}
-    FilesTree, TocTree {{
-        background: {BG_PANEL};
-    }}
-    ViewerPane {{
-        background: $background;
-        align-horizontal: center;
-    }}
-    ViewerPane > .content {{
-        max-width: 100;
-        width: 100%;
-        padding: 0 2;
-        background: $background;
-    }}
-    ViewerPane > .notice {{
-        color: {TEXT_MUTED};
-        text-align: center;
-        padding: 2 2;
-    }}
-    KeyGuide {{
-        dock: bottom;
-        height: 1;
-        background: {BG_CHROME};
-        color: {TEXT_MUTED};
-        padding: 0 1;
-    }}
-    KeyGuide.-error {{
-        color: {ERROR};
-    }}
-    """
+    CSS = APP_CSS
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("q", "quit", "quit"),
         Binding("e", "toggle_files", "files"),
         Binding("t", "toggle_toc", "toc"),
+        Binding("x", "close_tab", "close tab"),
+        Binding("ctrl+o", "history_back", "back"),
+        Binding("ctrl+i", "history_forward", "forward"),
     ]
 
     def __init__(self, root: Path, initial_file: Path | None = None) -> None:
@@ -103,12 +49,29 @@ class MokujiApp(App[None]):
         super().__init__()
         self._root = root.resolve()
         self._initial_file = initial_file.resolve() if initial_file else None
-        self._pending_count = ""
-        self._pending_g = False
+        self._navigator = TabNavigator(self)
+        self._keys = KeySequenceMachine(
+            scroll_top=lambda: self.query_one(ViewerPane).scroll_top(),
+            tab_next=self._navigator.tab_next,
+            tab_prev=self._navigator.tab_prev,
+        )
         self._narrow = False
 
+    @property
+    def tab_count(self) -> int:
+        """Number of open tabs."""
+        return self._navigator.tab_count
+
+    @property
+    def active_tab_index(self) -> int:
+        """Index of the active tab (0 when no tabs are open)."""
+        return self._navigator.active_index
+
     def compose(self) -> ComposeResult:
-        """Lay out the sidebar, viewer, and footer key guide."""
+        """Lay out the tab bar, sidebar, viewer, and footer key guide."""
+        tabs = Tabs(id="tabs")
+        tabs.display = False
+        yield tabs
         with Horizontal(id="main"):
             yield Sidebar(self._root, id="sidebar")
             yield ViewerPane(id="viewer")
@@ -120,7 +83,9 @@ class MokujiApp(App[None]):
         self.theme = "sumi"
         self.query_one(ViewerPane).focus()
         if self._initial_file is not None:
-            await self._open_path(self._initial_file)
+            await self.open_path(self._initial_file)
+        else:
+            await self.query_one(ViewerPane).show_empty()
 
     def on_resize(self, event: events.Resize) -> None:
         """Auto-collapse the sidebar on narrow terminals (req 2.1)."""
@@ -133,45 +98,27 @@ class MokujiApp(App[None]):
         sidebar.display = not narrow
 
     def on_key(self, event: events.Key) -> None:
-        """Drive the Vim-style multi-key sequence machine (gg, gt, gT, Ngt)."""
+        """Feed keys to the Vim-style sequence machine (gg, gt, gT, Ngt)."""
         if isinstance(self.focused, Input):
-            self._clear_key_sequence()
+            self._keys.reset()
             return
-        key = event.key
-        if key == "g":
+        if self._keys.handle(event.key):
             event.prevent_default()
             event.stop()
-            if self._pending_g:
-                self._clear_key_sequence()
-                self.query_one(ViewerPane).scroll_top()
-            else:
-                self._pending_g = True
-            return
-        if self._pending_g and key in {"t", "T"}:
-            event.prevent_default()
-            event.stop()
-            count = int(self._pending_count) if self._pending_count else None
-            self._clear_key_sequence()
-            if key == "t":
-                self._tab_next(count)
-            else:
-                self._tab_prev()
-            return
-        if key in _COUNT_DIGITS:
-            event.prevent_default()
-            event.stop()
-            if self._pending_g:
-                self._clear_key_sequence()
-            self._pending_count += key
-            return
-        self._clear_key_sequence()
 
     async def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected
     ) -> None:
         """Open a file chosen in the FILES tree."""
         event.stop()
-        await self._open_path(event.path)
+        await self.open_path(event.path)
+
+    async def on_files_tree_open_in_new_tab(
+        self, event: FilesTree.OpenInNewTab
+    ) -> None:
+        """Open a tree file in a new tab (the ``o`` key)."""
+        event.stop()
+        await self.open_in_new_tab(event.path)
 
     def on_tree_node_selected(self, event: Tree.NodeSelected[Heading]) -> None:
         """Jump to the heading chosen in the TOC tree."""
@@ -181,16 +128,27 @@ class MokujiApp(App[None]):
         heading = event.node.data
         if heading is None:
             return
-        viewer = self.query_one(ViewerPane)
-        self._jump_to_heading(viewer, heading.slug, heading.line)
-        viewer.focus()
+        self._navigator.jump_to_anchor(heading.slug, line=heading.line)
+        self.query_one(ViewerPane).focus()
 
     async def on_viewer_pane_confirm_large(
         self, event: ViewerPane.ConfirmLarge
     ) -> None:
         """Load a too-large file after the user confirmed with Enter."""
         event.stop()
-        await self._open_path(event.path, allow_large=True)
+        await self.open_path(event.path, allow_large=True)
+
+    async def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
+        """Route Markdown links through mokuji's link resolution."""
+        event.prevent_default()
+        event.stop()
+        await self.follow_link(event.href)
+
+    async def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
+        """Switch tab state when the tab bar activates another tab."""
+        index = self._navigator.index_of_tab_id(event.tab.id)
+        if index is not None and index != self._navigator.active_index:
+            await self._navigator.switch_to(index)
 
     def action_toggle_files(self) -> None:
         """Toggle the left pane in FILES mode (req 2.1)."""
@@ -204,32 +162,58 @@ class MokujiApp(App[None]):
         """Return focus to the content pane."""
         self.query_one(ViewerPane).focus()
 
-    async def _open_path(self, path: Path, *, allow_large: bool = False) -> None:
+    async def action_close_tab(self) -> None:
+        """Close the current tab (the ``x`` key)."""
+        await self._navigator.close_tab()
+
+    async def action_history_back(self) -> None:
+        """Go back in the active tab's jump history (ctrl+o)."""
+        await self._navigator.history_step(-1)
+
+    async def action_history_forward(self) -> None:
+        """Go forward in the active tab's jump history (ctrl+i)."""
+        await self._navigator.history_step(1)
+
+    async def open_path(
+        self, path: Path, *, allow_large: bool = False, anchor: str | None = None
+    ) -> None:
+        """Open *path* in the current tab, focusing an existing tab if open."""
+        await self._navigator.open_path(path, allow_large=allow_large, anchor=anchor)
+
+    async def open_in_new_tab(self, path: Path) -> None:
+        """Open *path* in a new tab, focusing an existing tab if open."""
+        await self._navigator.open_in_new_tab(path)
+
+    async def follow_link(self, href: str) -> None:
+        """Follow a Markdown link per req 2.8."""
+        document = self._navigator.active_document
+        if document is None:
+            return
+        target = resolve_link(document.path, href)
+        if isinstance(target, ExternalLink):
+            self._open_external(target.url)
+            return
+        if isinstance(target, InternalLink):
+            if not target.path.exists():
+                self.flash(f"not found: {href}")
+                return
+            await self.open_path(target.path, anchor=target.anchor)
+            return
+        self.flash(f"unsupported link: {href}")
+
+    def flash(self, message: str) -> None:
+        """Show a transient footer message (the single feedback channel)."""
+        self.query_one(KeyGuide).flash(message)
+
+    def _open_external(self, url: str) -> None:
         try:
-            document = load_document(path, allow_large=allow_large)
-        except DocumentLoadError as error:
-            self._flash_load_error(path, error)
-            return
-        await self.query_one(ViewerPane).show_document(document)
-        self.query_one(Sidebar).set_document(document)
-
-    def _flash_load_error(self, path: Path, error: DocumentLoadError) -> None:
-        if isinstance(error.__cause__, PermissionError):
-            self.query_one(KeyGuide).flash(f"permission denied: {path.name}")
+            opened = webbrowser.open(url)
+        except OSError:
+            opened = False
+        if opened:
+            self.flash("opened in browser")
         else:
-            self.query_one(KeyGuide).flash(str(error))
-
-    def _jump_to_heading(self, viewer: ViewerPane, slug: str, line: int) -> None:
-        """Scroll the viewer to a heading, preferring anchor navigation."""
-        document = viewer.document
-        markdown = viewer.query(Markdown)
-        if markdown and markdown.first().goto_anchor(slug):
-            return
-        if document is None or not document.text:
-            return
-        total_lines = max(1, document.text.count("\n"))
-        target = round(line / total_lines * viewer.max_scroll_y)
-        viewer.scroll_to(y=target, animate=False)
+            self.flash(f"could not open browser: {url}")
 
     def _toggle_pane(self, mode: SidebarMode) -> None:
         sidebar = self.query_one(Sidebar)
@@ -244,13 +228,3 @@ class MokujiApp(App[None]):
         sidebar.set_class(self._narrow, "-overlay")
         sidebar.display = True
         sidebar.active_tree.focus()
-
-    def _clear_key_sequence(self) -> None:
-        self._pending_count = ""
-        self._pending_g = False
-
-    def _tab_next(self, count: int | None) -> None:
-        """Switch to the next (or *count*-th) tab; single-document for now."""
-
-    def _tab_prev(self) -> None:
-        """Switch to the previous tab; single-document for now."""

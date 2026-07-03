@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 BINARY_NOTICE = "binary file — cannot display"
 EMPTY_NOTICE = "(empty file)"
+EMPTY_STATE_TEXT = "mokuji\n読 · read your docs\n\ne browse files   ·   ? help"
 
 
 def too_large_notice(size: int) -> str:
@@ -54,6 +55,12 @@ class ViewerPane(VerticalScroll):
     def __init__(self, *, id: str | None = None) -> None:  # noqa: A002 — Textual's own widget id parameter name
         super().__init__(id=id)
         self.document: Document | None = None
+
+    async def show_empty(self) -> None:
+        """Clear the pane and show the no-file-open state (req 3.3)."""
+        self.document = None
+        await self.remove_children()
+        await self.mount(Static(EMPTY_STATE_TEXT, classes="content notice empty-state"))
 
     async def show_document(self, document: Document) -> None:
         """Replace the pane's content with a rendering of *document*."""
@@ -93,5 +100,5 @@ class ViewerPane(VerticalScroll):
         if not document.text:
             return Static(EMPTY_NOTICE, classes="content notice")
         if document.kind is FileKind.MARKDOWN:
-            return Markdown(document.text, classes="content")
+            return Markdown(document.text, classes="content", open_links=False)
         return Static(Text(document.text), classes="content plain-text")

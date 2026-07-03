@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from textual.binding import Binding, BindingType
 from textual.containers import Vertical
+from textual.message import Message
 from textual.widgets import DirectoryTree, Static, Tree
 
 from .._document import Heading
@@ -45,11 +46,25 @@ class SidebarMode(enum.Enum):
 class FilesTree(DirectoryTree):
     """Directory tree that hides ``.git`` and dims non-Markdown entries."""
 
+    class OpenInNewTab(Message):
+        """The user asked to open the cursor file in a new tab."""
+
+        def __init__(self, path: Path) -> None:
+            self.path = path
+            super().__init__()
+
     BINDINGS: ClassVar[list[BindingType]] = [
         *_VIM_TREE_BINDINGS,
         Binding("h", "collapse_current", "collapse", show=False),
         Binding("l", "expand_current", "expand", show=False),
+        Binding("o", "open_new_tab", "open in new tab", show=False),
     ]
+
+    def action_open_new_tab(self) -> None:
+        """Post a request to open the cursor file in a new tab."""
+        node = self.cursor_node
+        if node is not None and node.data is not None and node.data.path.is_file():
+            self.post_message(self.OpenInNewTab(node.data.path))
 
     def filter_paths(self, paths: Iterable[Path]) -> Iterable[Path]:
         """Hide ``.git`` directories; everything else stays visible."""
