@@ -47,6 +47,17 @@ class SearchController:
         """Whether a confirmed search is currently showing matches."""
         return self._active is not None
 
+    @property
+    def status_text(self) -> str | None:
+        """The ``match N/M · line L`` footer text, or ``None`` if inactive."""
+        if self._active is None:
+            return None
+        match = self._active.matches[self._active.index]
+        return (
+            f"match {self._active.index + 1}/{len(self._active.matches)}"
+            f" · line {match.line + 1}"
+        )
+
     def open_input(self) -> None:
         """Show the search input over the footer and focus it."""
         self._app.query_one(KeyGuide).display = False
@@ -112,11 +123,7 @@ class SearchController:
         match = self._active.matches[self._active.index]
         viewer.scroll_to_line(match.line)
         viewer.show_matches(self._active.matches, self._active.index)
-        status = (
-            f"match {self._active.index + 1}/{len(self._active.matches)}"
-            f" · line {match.line + 1}"
-        )
-        self._app.query_one(KeyGuide).set_default(status)
+        self._app.query_one(KeyGuide).set_default(self.status_text)
 
     def _close_input(self) -> None:
         search_input = self._app.query_one(SearchInput)

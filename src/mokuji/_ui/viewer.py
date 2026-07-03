@@ -57,6 +57,7 @@ class ViewerPane(VerticalScroll):
         Binding("n", "app.search_next", "next match", show=False),
         Binding("N", "app.search_prev", "previous match", show=False),
         Binding("escape", "app.dismiss_search", "clear search", show=False),
+        Binding("r", "app.reload", "reload", show=False),
     ]
 
     def __init__(self, *, id: str | None = None) -> None:  # noqa: A002 — Textual's own widget id parameter name

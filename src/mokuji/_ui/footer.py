@@ -13,6 +13,8 @@ CONTENT_HINTS = (
     "j/k scroll · d/u page · / search · e files · t toc · gt tab · ? help · q quit"
 )
 
+TREE_HINTS = "j/k move · Enter open · o new tab · e close · ? help"
+
 FLASH_SECONDS = 3.0
 
 

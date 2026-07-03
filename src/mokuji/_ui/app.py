@@ -8,11 +8,12 @@ from typing import TYPE_CHECKING, ClassVar
 from textual.app import App
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal
-from textual.widgets import DirectoryTree, Input, Markdown, Tabs, Tree
+from textual.widgets import DirectoryTree, Input, Markdown, Static, Tabs, Tree
 
 from .._document import ExternalLink, InternalLink, resolve_link
 from .._theme import SUMI_THEME
-from .footer import KeyGuide
+from .footer import TREE_HINTS, KeyGuide
+from .help import HelpScreen
 from .keys import KeySequenceMachine
 from .navigator import TabNavigator
 from .search import SearchController, SearchInput
@@ -29,6 +30,8 @@ if TYPE_CHECKING:
     from .._document import Heading
 
 NARROW_WIDTH = 80
+TINY_WIDTH = 40
+TINY_HEIGHT = 10
 
 
 class MokujiApp(App[None]):
@@ -43,6 +46,8 @@ class MokujiApp(App[None]):
         Binding("x", "close_tab", "close tab"),
         Binding("ctrl+o", "history_back", "back"),
         Binding("ctrl+i", "history_forward", "forward"),
+        Binding("question_mark", "help", "help"),
+        Binding("ctrl+g", "toggle_guide", "toggle key guide", show=False),
     ]
 
     def __init__(self, root: Path, initial_file: Path | None = None) -> None:
@@ -81,6 +86,9 @@ class MokujiApp(App[None]):
         search_input = SearchInput(id="search-input", placeholder="search")
         search_input.display = False
         yield search_input
+        too_small = Static("terminal too small", id="too-small")
+        too_small.display = False
+        yield too_small
 
     async def on_mount(self) -> None:
         """Activate the sumi theme, focus the viewer, and open the initial file."""
@@ -94,6 +102,8 @@ class MokujiApp(App[None]):
 
     def on_resize(self, event: events.Resize) -> None:
         """Auto-collapse the sidebar on narrow terminals (req 2.1)."""
+        too_small = event.size.width < TINY_WIDTH or event.size.height < TINY_HEIGHT
+        self.query_one("#too-small", Static).display = too_small
         narrow = event.size.width < NARROW_WIDTH
         if narrow == self._narrow:
             return
@@ -185,6 +195,28 @@ class MokujiApp(App[None]):
     def dismiss_search(self) -> None:
         """Drop any active search; called on every navigation."""
         self._search.dismiss()
+
+    def on_descendant_focus(self, event: events.DescendantFocus) -> None:
+        """Keep the footer hints matched to the focused region (req 2.7)."""
+        footer = self.query_one(KeyGuide)
+        if isinstance(event.widget, FilesTree | TocTree):
+            footer.set_default(TREE_HINTS)
+        elif isinstance(event.widget, ViewerPane):
+            footer.set_default(self._search.status_text)
+
+    def action_help(self) -> None:
+        """Open the full keybinding reference (the ``?`` key)."""
+        footer_hidden = not self.query_one(KeyGuide).display
+        self.push_screen(HelpScreen(footer_hidden=footer_hidden))
+
+    def action_toggle_guide(self) -> None:
+        """Show or hide the footer key guide (ctrl+g, session-scoped)."""
+        footer = self.query_one(KeyGuide)
+        footer.display = not footer.display
+
+    async def action_reload(self) -> None:
+        """Re-read the current file from disk (the ``r`` key)."""
+        await self._navigator.reload()
 
     def action_toggle_files(self) -> None:
         """Toggle the left pane in FILES mode (req 2.1)."""

@@ -111,6 +111,23 @@ class TabNavigator:
         self._update_tab_bar()
         await self._render_active(restore_scroll=True)
 
+    async def reload(self) -> None:
+        """Re-read the active document from disk, keeping scroll (req 2.4)."""
+        if not self._states:
+            return
+        state = self._states[self._active]
+        path = state.document.path
+        if not path.exists():
+            self._app.flash(f"file no longer exists: {path.name}")
+            return
+        self._save_scroll()
+        document = self._load_or_flash(path, allow_large=True)
+        if document is None:
+            return
+        state.document = document
+        await self._render_active(restore_scroll=True)
+        self._app.flash("reloaded")
+
     async def history_step(self, delta: int) -> None:
         """Move back (-1) or forward (+1) in the active tab's history."""
         if not self._states:

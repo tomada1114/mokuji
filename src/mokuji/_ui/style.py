@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
-from .._theme import ACCENT, BG_CHROME, BG_PANEL, ERROR, TEXT_MUTED
+from .._theme import (
+    ACCENT,
+    BG,
+    BG_CHROME,
+    BG_PANEL,
+    ERROR,
+    TEXT_FAINT,
+    TEXT_MUTED,
+    TEXT_SECONDARY,
+)
 
 APP_CSS = f"""
 Screen {{
@@ -73,5 +82,35 @@ SearchInput {{
 }}
 SearchInput:focus {{
     border: none;
+}}
+HelpScreen {{
+    align: center middle;
+}}
+#help-panel {{
+    width: 60;
+    max-width: 90%;
+    height: auto;
+    background: {BG_PANEL};
+    border: round {TEXT_FAINT};
+    padding: 1 2;
+}}
+#help-title {{
+    text-style: bold;
+    color: {ACCENT};
+    text-align: center;
+    margin-bottom: 1;
+}}
+#help-body {{
+    color: {TEXT_SECONDARY};
+}}
+#too-small {{
+    layer: overlay;
+    dock: top;
+    width: 100%;
+    height: 100%;
+    background: {BG};
+    color: {TEXT_MUTED};
+    content-align: center middle;
+    text-align: center;
 }}
 """
