@@ -45,9 +45,10 @@ A few keys to get productive:
 - `?` opens the complete key reference at any time.
 
 !!! tip
-    The footer always shows the keys that work in the focused pane. If
-    you hide it with `Ctrl+g`, the help modal reminds you how to bring
-    it back.
+    The footer always shows the keys that work in the focused pane,
+    wrapping onto up to three lines when the terminal is narrow. If you
+    hide it with `Ctrl+g`, the help modal reminds you how to bring it
+    back.
 
 ## What's Next?
 
