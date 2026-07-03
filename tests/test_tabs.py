@@ -20,7 +20,7 @@ def make_app(tmp_path):
     return MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
 
 
-async def press_o_on(pilot, app, name):
+async def open_from_tree(pilot, app, name):
     tree = app.query_one(FilesTree)
     tree.focus()
     await pilot.pause()
@@ -30,7 +30,7 @@ async def press_o_on(pilot, app, name):
     for node in tree.root.children:
         if node.data is not None and node.data.path.name == name:
             tree.cursor_line = node.line
-            await pilot.press("o")
+            await pilot.press("enter")
             await pilot.pause()
             return
     message = f"no tree entry called {name}"
@@ -67,18 +67,18 @@ class TestTabLifecycle:
             assert app.tab_count == 1
             assert not app.query_one(Tabs).display
 
-    async def test_o_in_tree_opens_second_tab_and_shows_bar(self, tmp_path):
+    async def test_enter_in_tree_opens_second_tab_and_shows_bar(self, tmp_path):
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
-            await press_o_on(pilot, app, "script.py")
+            await open_from_tree(pilot, app, "script.py")
             assert app.tab_count == 2
 
     async def test_tab_bar_stays_out_of_the_focus_cycle(self, tmp_path):
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
-            await press_o_on(pilot, app, "script.py")
+            await open_from_tree(pilot, app, "script.py")
             assert app.query_one(Tabs).display
             app.query_one(ViewerPane).focus()
             await pilot.press("tab")
@@ -95,7 +95,7 @@ class TestTabLifecycle:
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
-            await press_o_on(pilot, app, "script.py")
+            await open_from_tree(pilot, app, "script.py")
             app.query_one(ViewerPane).focus()
             await pilot.press("g", "t")
             await pilot.pause()
@@ -108,7 +108,7 @@ class TestTabLifecycle:
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
-            await press_o_on(pilot, app, "script.py")
+            await open_from_tree(pilot, app, "script.py")
             app.query_one(ViewerPane).focus()
             await pilot.press("1", "g", "t")
             await pilot.pause()
@@ -121,7 +121,7 @@ class TestTabLifecycle:
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
-            await press_o_on(pilot, app, "script.py")
+            await open_from_tree(pilot, app, "script.py")
             app.query_one(ViewerPane).focus()
             await pilot.press("x")
             await pilot.pause()
@@ -149,14 +149,9 @@ class TestTabLifecycle:
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
-            await press_o_on(pilot, app, "script.py")
+            await open_from_tree(pilot, app, "script.py")
             assert app.active_tab_index == 1
-            tree = app.query_one(FilesTree)
-            for node in tree.root.children:
-                if node.data is not None and node.data.path.name == "README.md":
-                    tree.cursor_line = node.line
-                    await pilot.press("enter")
-                    await pilot.pause()
+            await open_from_tree(pilot, app, "README.md")
             assert app.tab_count == 2
             assert app.active_tab_index == 0
 
@@ -168,7 +163,7 @@ class TestTabLifecycle:
             await pilot.press("G")
             bottom = viewer.scroll_y
             assert bottom > 0
-            await press_o_on(pilot, app, "script.py")
+            await open_from_tree(pilot, app, "script.py")
             assert viewer.scroll_y == 0
             app.query_one(ViewerPane).focus()
             await pilot.press("g", "t")

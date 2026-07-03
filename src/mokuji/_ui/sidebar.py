@@ -49,13 +49,6 @@ class SidebarMode(enum.Enum):
 class FilesTree(DirectoryTree):
     """Directory tree that hides non-Markdown files behind a toggle."""
 
-    class OpenInNewTab(Message):
-        """The user asked to open the cursor file in a new tab."""
-
-        def __init__(self, path: Path) -> None:
-            self.path = path
-            super().__init__()
-
     class FilterToggled(Message):
         """The Markdown-only filter was switched on or off."""
 
@@ -67,7 +60,6 @@ class FilesTree(DirectoryTree):
         *_VIM_TREE_BINDINGS,
         Binding("h", "collapse_current", "collapse", show=False),
         Binding("l", "expand_current", "expand", show=False),
-        Binding("o", "open_new_tab", "open in new tab", show=False),
         Binding("full_stop", "toggle_filter", "toggle all files", show=False),
     ]
 
@@ -83,12 +75,6 @@ class FilesTree(DirectoryTree):
         """
         if self.cursor_line == -1:
             self.cursor_line = 0
-
-    def action_open_new_tab(self) -> None:
-        """Post a request to open the cursor file in a new tab."""
-        node = self.cursor_node
-        if node is not None and node.data is not None and node.data.path.is_file():
-            self.post_message(self.OpenInNewTab(node.data.path))
 
     async def action_toggle_filter(self) -> None:
         """Toggle between Markdown-only and all-files views (the ``.`` key)."""

@@ -88,7 +88,7 @@ HelpScreen {{
     align: center middle;
 }}
 #help-panel {{
-    width: 74;
+    width: 82;
     max-width: 96%;
     height: auto;
     max-height: 96%;
@@ -123,6 +123,53 @@ HelpScreen {{
     color: {TEXT_MUTED};
     text-align: center;
     margin-top: 1;
+}}
+TourScreen {{
+    align: center middle;
+}}
+#tour-panel {{
+    width: 64;
+    max-width: 96%;
+    height: auto;
+    max-height: 96%;
+    overflow-y: auto;
+    background: {BG_PANEL};
+    border: round {TEXT_FAINT};
+    padding: 1 2;
+    align-horizontal: center;
+}}
+#tour-title {{
+    text-style: bold;
+    color: {ACCENT};
+    text-align: center;
+    width: 100%;
+    margin-bottom: 1;
+}}
+#tour-mock {{
+    width: auto;
+    height: auto;
+    margin-bottom: 1;
+}}
+#tour-blurb {{
+    color: {TEXT_SECONDARY};
+    width: 100%;
+    margin-bottom: 1;
+}}
+#tour-keys {{
+    width: auto;
+    height: auto;
+    color: {TEXT_SECONDARY};
+    margin-bottom: 1;
+}}
+#tour-dots {{
+    width: 100%;
+    text-align: center;
+    margin-bottom: 1;
+}}
+#tour-hints {{
+    color: {TEXT_MUTED};
+    text-align: center;
+    width: 100%;
 }}
 #too-small {{
     layer: overlay;

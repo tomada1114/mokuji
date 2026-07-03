@@ -23,7 +23,7 @@ CONTENT_HINTS: tuple[TieredHint, ...] = (
     ("d/u", "page", 1),
     ("gg/G", "top/bottom", 2),
     ("/", "search", 0),
-    ("e", "files", 0),
+    ("e", "file tree", 0),
     ("t", "toc", 1),
     ("gt", "tab", 1),
     ("x", "close tab", 2),
@@ -36,11 +36,11 @@ CONTENT_HINTS: tuple[TieredHint, ...] = (
 TREE_HINTS: tuple[TieredHint, ...] = (
     ("j/k", "move", 0),
     ("h/l", "collapse/expand", 2),
-    ("Enter", "open", 0),
-    ("o", "new tab", 0),
+    ("Enter", "open in new tab", 0),
+    ("Esc", "back to content", 1),
     ("Tab", "switch focus", 2),
     (".", "all files", 0),
-    ("e", "close", 0),
+    ("e", "close pane", 0),
     ("?", "help", 0),
 )
 

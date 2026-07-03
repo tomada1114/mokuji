@@ -44,8 +44,7 @@ FILES_AND_TOC: Section = (
     (
         ("e / t", "toggle files / toc pane"),
         ("Tab", "switch tree ↔ content"),
-        ("Enter", "open file / jump to heading"),
-        ("o", "open file in a new tab"),
+        ("Enter", "open in new tab / jump to heading"),
         ("h / l", "collapse / expand folder"),
         (".", "toggle non-Markdown files"),
         ("Esc", "return to content"),
@@ -68,6 +67,7 @@ RIGHT_SECTIONS: tuple[Section, ...] = (FILES_AND_TOC, SEARCH)
 CLOSE_HINTS = (
     f"[bold {ACCENT}]? / Esc / q[/] close this help"
     f" [{TEXT_FAINT}]·[/] [bold {ACCENT}]Ctrl+g[/] show / hide the key guide"
+    f" [{TEXT_FAINT}]·[/] [bold {ACCENT}]w[/] welcome tour"
 )
 
 GUIDE_HIDDEN_NOTE = "key guide hidden — press Ctrl+g to bring it back"
@@ -86,13 +86,18 @@ def format_column(sections: tuple[Section, ...]) -> str:
     return "\n\n".join(_format_section(section, key_width) for section in sections)
 
 
-class HelpScreen(ModalScreen[None]):
-    """Centered modal listing every keybinding grouped by category."""
+class HelpScreen(ModalScreen[bool]):
+    """Centered modal listing every keybinding grouped by category.
+
+    Dismisses ``True`` when the user asked for the welcome tour (``w``),
+    ``False`` on a plain close.
+    """
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("question_mark", "dismiss_help", "close", show=False),
         Binding("escape", "dismiss_help", "close", show=False),
         Binding("q", "dismiss_help", "close", show=False),
+        Binding("w", "open_tour", "welcome tour", show=False),
     ]
 
     def __init__(self, *, guide_hidden: bool = False) -> None:
@@ -113,4 +118,8 @@ class HelpScreen(ModalScreen[None]):
 
     def action_dismiss_help(self) -> None:
         """Close the modal."""
-        self.dismiss()
+        self.dismiss(False)
+
+    def action_open_tour(self) -> None:
+        """Close the modal, asking the app to open the welcome tour."""
+        self.dismiss(True)

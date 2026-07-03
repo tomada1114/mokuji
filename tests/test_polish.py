@@ -58,7 +58,7 @@ class TestHelpModal:
             assert "half page down / up" in left
             assert "FILES & TOC" in right
             assert "SEARCH" in right
-            assert "open file / jump to heading" in right
+            assert "open in new tab / jump to heading" in right
             close = str(app.screen.query_one("#help-close").render())
             assert "Ctrl+g" in close
 

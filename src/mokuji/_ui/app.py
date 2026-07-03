@@ -11,6 +11,7 @@ from textual.containers import Horizontal
 from textual.widgets import DirectoryTree, Input, Markdown, Static, Tabs, Tree
 
 from .._document import ExternalLink, InternalLink, resolve_link
+from .._state import is_first_run, mark_tour_seen
 from .._theme import SUMI_THEME
 from .footer import TREE_HINTS, KeyGuide
 from .help import HelpScreen
@@ -19,6 +20,7 @@ from .navigator import TabNavigator
 from .search import SearchController, SearchInput
 from .sidebar import FilesTree, Sidebar, SidebarMode, TocTree
 from .style import APP_CSS
+from .tour import TourScreen, tutorial_path
 from .viewer import ViewerPane
 
 if TYPE_CHECKING:
@@ -107,6 +109,9 @@ class MokujiApp(App[None]):
         else:
             await self.query_one(ViewerPane).show_empty()
             self.query_one(FilesTree).focus()
+        if is_first_run():
+            mark_tour_seen()
+            self.push_screen(TourScreen(), self._on_tour_closed)
 
     def on_resize(self, event: events.Resize) -> None:
         """Auto-collapse the sidebar on narrow terminals (req 2.1)."""
@@ -136,21 +141,17 @@ class MokujiApp(App[None]):
     ) -> None:
         """Open a file chosen in the FILES tree and move focus to it.
 
-        Focus only moves when the file actually became the active document,
-        so a failed open (e.g. permission denied) leaves the tree focused.
+        Every file opens in its own tab (the tab is focused instead when
+        the file is already open), so browsing never replaces a document
+        the user was reading. Focus only moves when the file actually
+        became the active document, so a failed open (e.g. permission
+        denied) leaves the tree focused.
         """
         event.stop()
-        await self.open_path(event.path)
+        await self.open_in_new_tab(event.path)
         document = self._navigator.active_document
         if document is not None and document.path == event.path.resolve():
             self.query_one(ViewerPane).focus()
-
-    async def on_files_tree_open_in_new_tab(
-        self, event: FilesTree.OpenInNewTab
-    ) -> None:
-        """Open a tree file in a new tab (the ``o`` key)."""
-        event.stop()
-        await self.open_in_new_tab(event.path)
 
     def on_files_tree_filter_toggled(self, event: FilesTree.FilterToggled) -> None:
         """Flash the new tree filter state (the ``.`` key)."""
@@ -229,7 +230,22 @@ class MokujiApp(App[None]):
     def action_help(self) -> None:
         """Open the full keybinding reference (the ``?`` key)."""
         guide_hidden = not self.query_one(KeyGuide).display
-        self.push_screen(HelpScreen(guide_hidden=guide_hidden))
+        self.push_screen(HelpScreen(guide_hidden=guide_hidden), self._on_help_closed)
+
+    def _on_help_closed(self, open_tour: bool | None) -> None:
+        """Open the welcome tour when help was dismissed with ``w``."""
+        if open_tour:
+            self.push_screen(TourScreen(), self._on_tour_closed)
+
+    def _on_tour_closed(self, open_tutorial: bool | None) -> None:
+        """Open the bundled tutorial when the tour finished with Enter."""
+        if open_tutorial:
+            self.call_next(self._open_tutorial)
+
+    async def _open_tutorial(self) -> None:
+        # A new tab keeps whatever document the user already had open.
+        await self.open_in_new_tab(tutorial_path())
+        self.query_one(ViewerPane).focus()
 
     def action_toggle_guide(self) -> None:
         """Show or hide the footer key guide (ctrl+g, session-scoped)."""
