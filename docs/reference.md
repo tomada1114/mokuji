@@ -44,6 +44,7 @@ mokuji is an application, not a library: its public Python surface is the
 | `Enter` (tree) | open file / expand directory |
 | `o` (tree) | open file in a new tab |
 | `h` / `l` (tree) | collapse / expand directory |
+| `.` (tree) | toggle non-Markdown files (hidden by default) |
 | `Enter` (TOC) | jump to heading |
 | `Esc` (tree) | return focus to content |
 

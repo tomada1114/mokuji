@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- FILES pane now hides non-Markdown files by default; press `.` in the
+  tree to toggle between Markdown-only and all files (the footer flashes
+  the new state, and the key guide/help list the key)
+
+### Added
+
+- Expanding a directory with nothing to show now displays a dim
+  placeholder row: `(no markdown files)` when entries are filtered out,
+  `(empty)` when the directory is truly empty
+
 ## [0.1.0] - 2026-07-02
 
 ### Added

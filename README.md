@@ -30,7 +30,8 @@ uvx mokuji            # browse the current repository
   from Tokyo Night).
 - **In-file search** — `/` with smart case, `n`/`N` navigation, and match
   highlighting.
-- Non-Markdown files open read-only as plain text; binary and oversized
+- Non-Markdown files are hidden from the tree by default (`.` shows
+  them); they open read-only as plain text, and binary and oversized
   files are handled gracefully.
 
 ## Install
@@ -68,6 +69,7 @@ uvx mokuji
 | `Tab` | global | cycle focus tree ↔ content |
 | `Enter` | tree | open file / expand directory |
 | `o` | tree | open file in a new tab |
+| `.` | tree | toggle non-Markdown files (hidden by default) |
 | `Enter` | TOC | jump to heading |
 | `gt` / `gT` / `<N>gt` | global | next / previous / Nth tab |
 | `x` | global | close tab |

@@ -28,10 +28,11 @@ cd your-project
 mokuji
 ```
 
-The FILES pane on the left lists everything under the current directory.
-Move with `j`/`k`, open a document with `Enter`, or open it in a new tab
-with `o`. Markdown files render with headings, code blocks, and tables;
-any other text file opens read-only as plain text.
+The FILES pane on the left lists the Markdown files under the current
+directory (press `.` to show everything else too). Move with `j`/`k`,
+open a document with `Enter`, or open it in a new tab with `o`. Markdown
+files render with headings, code blocks, and tables; any other text file
+opens read-only as plain text.
 
 A few keys to get productive:
 
