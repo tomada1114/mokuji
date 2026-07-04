@@ -9,7 +9,7 @@ from textual.widgets import Markdown, Tab, Tabs
 
 from .._document import load_document
 from .._errors import DocumentLoadError
-from .sidebar import Sidebar
+from .sidebar import FilesTree, Sidebar, SidebarMode
 from .tabs import TabState, next_tab_index, prev_tab_index, tab_labels
 from .viewer import ViewerPane
 
@@ -104,8 +104,12 @@ class TabNavigator:
         await self._app.query_one(Tabs).remove_tab(state.tab_id)
         if not self._states:
             await self._app.query_one(ViewerPane).show_empty()
-            self._app.query_one(Sidebar).set_document(None)
+            sidebar = self._app.query_one(Sidebar)
+            sidebar.set_document(None)
             self._update_tab_bar()
+            sidebar.show_mode(SidebarMode.FILES)
+            sidebar.display = True
+            self._app.query_one(FilesTree).focus()
             return
         self._app.query_one(Tabs).active = self._states[self._active].tab_id
         self._update_tab_bar()

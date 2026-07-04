@@ -7,7 +7,7 @@ from pathlib import Path
 from textual.widgets import Tab, Tabs
 
 from mokuji._ui.app import MokujiApp
-from mokuji._ui.sidebar import FilesTree
+from mokuji._ui.sidebar import FilesTree, Sidebar
 from mokuji._ui.tabs import next_tab_index, prev_tab_index, tab_labels
 from mokuji._ui.viewer import ViewerPane
 
@@ -144,6 +144,29 @@ class TestTabLifecycle:
             notice = app.query_one(".empty-state")
             assert "e browse files" in str(notice.render())
             assert app.is_running
+
+    async def test_closing_last_tab_focuses_files_tree(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            app.query_one(ViewerPane).focus()
+            await pilot.press("x")
+            await pilot.pause()
+            assert app.query_one(Sidebar).display
+            assert isinstance(app.focused, FilesTree)
+
+    async def test_closing_last_tab_shows_sidebar_when_hidden(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await pilot.press("e", "e")  # focus the (visible) tree, then hide it
+            await pilot.pause()
+            assert not app.query_one(Sidebar).display
+            app.query_one(ViewerPane).focus()
+            await pilot.press("x")
+            await pilot.pause()
+            assert app.query_one(Sidebar).display
+            assert isinstance(app.focused, FilesTree)
 
     async def test_reopening_open_file_focuses_existing_tab(self, tmp_path):
         app = make_app(tmp_path)
