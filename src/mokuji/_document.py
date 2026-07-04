@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from ._errors import DocumentLoadError
 from ._files import FileKind, classify_file, is_markdown
@@ -154,8 +154,8 @@ def resolve_link(base: Path, href: str) -> LinkTarget:
         return ExternalLink(url=href)
     if parts.scheme:
         return UnsupportedLink(href=href)
-    anchor = parts.fragment or None
+    anchor = unquote(parts.fragment) or None
     if not parts.path:
         return InternalLink(path=base.resolve(), anchor=anchor)
-    target = (base.parent / parts.path).resolve()
+    target = (base.parent / unquote(parts.path)).resolve()
     return InternalLink(path=target, anchor=anchor)

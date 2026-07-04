@@ -198,6 +198,18 @@ class TestResolveLink:
         target = resolve_link(tmp_path / "a.md", "ftp://host/file")
         assert target == UnsupportedLink(href="ftp://host/file")
 
+    def test_percent_encoded_path_is_decoded(self, tmp_path):
+        base = tmp_path / "docs" / "a.md"
+        target = resolve_link(base, "my%20file.md")
+        assert target == InternalLink(
+            path=(tmp_path / "docs" / "my file.md").resolve(), anchor=None
+        )
+
+    def test_percent_encoded_fragment_is_decoded(self, tmp_path):
+        base = tmp_path / "a.md"
+        target = resolve_link(base, "#caf%C3%A9")
+        assert target == InternalLink(path=base.resolve(), anchor="café")
+
     def test_traversal_never_escapes_filesystem_root(self, tmp_path):
         base = tmp_path / "a.md"
         href = "../" * 100 + "etc/passwd"
