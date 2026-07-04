@@ -42,11 +42,12 @@ TABS_AND_HISTORY: Section = (
 FILES_AND_TOC: Section = (
     "files & toc",
     (
-        ("e / t", "toggle files / toc pane"),
+        ("e / t", "focus files / toc pane (press again to hide)"),
         ("Tab", "switch tree ↔ content"),
         ("Enter", "open in new tab / jump to heading"),
         ("h / l", "collapse / expand folder"),
         (".", "toggle non-Markdown files"),
+        ("/", "filter tree by name"),
         ("Esc", "return to content"),
     ),
 )
@@ -58,6 +59,7 @@ SEARCH: Section = (
         ("Enter", "jump to the first match"),
         ("n / N", "next / previous match"),
         ("Esc", "cancel / clear the search"),
+        ("S", "search across all files"),
     ),
 )
 

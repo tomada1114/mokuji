@@ -46,10 +46,15 @@ with `Ctrl+o` and forward with `Ctrl+i`, just like in Vim.
 
 ## Search
 
-Press `/`, type the word **lantern**, and hit `Enter`. The match is
-highlighted right in this paragraph: a paper lantern reads best in a
-quiet, dark room — which is exactly the mood mokuji is going for.
-Press `n` and `N` to hop between matches, and `Esc` to clear them.
+Press `/`, type the word **lantern**, and hit `Enter`. Markdown has no
+inline highlighting, so look at the footer: it jumps you to the match
+(a paper lantern reads best in a quiet, dark room — which is exactly
+the mood mokuji is going for) and shows your position, the line
+number, and the matched text itself, accented. Press `n` and `N` to
+hop between matches, and `Esc` to clear them.
+
+Press `S` to search every Markdown file in the project at once —
+handy when you remember a phrase but not which file it's in.
 
 ## Links
 

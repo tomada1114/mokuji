@@ -65,7 +65,7 @@ class TestWrapHints:
 class TestGuideWrapping:
     async def test_narrow_terminal_still_shows_every_hint(self, tmp_path):
         app = make_app(tmp_path)
-        async with app.run_test(size=(60, 24)) as pilot:
+        async with app.run_test(size=(72, 24)) as pilot:
             await pilot.pause()
             text = footer_text(app)
             for fragment in (
@@ -75,12 +75,13 @@ class TestGuideWrapping:
                 "x close tab",
                 "C-o/C-i history",
                 "r reload",
+                "S search all",
                 "q quit",
             ):
                 assert fragment in text
             lines = text.split("\n")
             assert 2 <= len(lines) <= MAX_GUIDE_LINES
-            assert all(len(line) <= 60 for line in lines)
+            assert all(len(line) <= 72 for line in lines)
 
     async def test_wide_terminal_uses_a_single_line(self, tmp_path):
         app = make_app(tmp_path)
@@ -95,7 +96,7 @@ class TestGuideWrapping:
         async with app.run_test(size=(160, 24)) as pilot:
             await pilot.pause()
             assert "\n" not in footer_text(app)
-            await pilot.resize_terminal(60, 24)
+            await pilot.resize_terminal(72, 24)
             await pilot.pause()
             text = footer_text(app)
             assert "\n" in text

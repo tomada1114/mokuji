@@ -29,6 +29,7 @@ CONTENT_HINTS: tuple[TieredHint, ...] = (
     ("x", "close tab", 2),
     ("C-o/C-i", "history", 3),
     ("r", "reload", 3),
+    ("S", "search all", 1),
     ("?", "help", 0),
     ("q", "quit", 0),
 )
@@ -42,6 +43,7 @@ TREE_HINTS: tuple[TieredHint, ...] = (
     (".", "all files", 0),
     ("/", "filter", 0),
     ("e", "close pane", 0),
+    ("S", "search all", 1),
     ("?", "help", 0),
 )
 
