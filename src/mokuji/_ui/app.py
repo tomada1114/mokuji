@@ -21,6 +21,7 @@ from .search import SearchController, SearchInput
 from .sidebar import FilesTree, Sidebar, SidebarMode, TocTree
 from .style import APP_CSS
 from .tour import TourScreen, tutorial_path
+from .tree_filter import TreeFilterController
 from .viewer import ViewerPane
 
 if TYPE_CHECKING:
@@ -59,6 +60,7 @@ class MokujiApp(App[None]):
         self._initial_file = initial_file.resolve() if initial_file else None
         self._navigator = TabNavigator(self)
         self._search = SearchController(self)
+        self._tree_filter = TreeFilterController(self)
         self._keys = KeySequenceMachine(
             scroll_top=self._gg_scroll_top,
             tab_next=self._navigator.tab_next,
@@ -188,20 +190,37 @@ class MokujiApp(App[None]):
         if index is not None and index != self._navigator.active_index:
             await self._navigator.switch_to(index)
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Confirm the search query typed into the footer input."""
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Confirm the search query or type-to-filter typed into the footer."""
         if event.input.id != "search-input":
             return
         event.stop()
-        self._search.submit(event.value)
+        if self._tree_filter.is_active:
+            await self._tree_filter.submit(event.value)
+        else:
+            self._search.submit(event.value)
+
+    async def on_input_changed(self, event: Input.Changed) -> None:
+        """Live-narrow the tree while the type-to-filter input is open (req U1b)."""
+        if event.input.id != "search-input" or not self._tree_filter.is_active:
+            return
+        event.stop()
+        await self._tree_filter.on_query_changed(event.value)
 
     def action_open_search(self) -> None:
         """Open the search input over the footer (the ``/`` key)."""
         self._search.open_input()
 
-    def action_cancel_search(self) -> None:
-        """Cancel the search input (escape while typing)."""
-        self._search.cancel_input()
+    def action_open_tree_filter(self) -> None:
+        """Open the search input for tree type-to-filter (``/`` in a tree)."""
+        self._tree_filter.open_input()
+
+    async def action_cancel_search(self) -> None:
+        """Cancel the search input or tree filter (escape while typing)."""
+        if self._tree_filter.is_active:
+            await self._tree_filter.cancel()
+        else:
+            self._search.cancel_input()
 
     def action_search_next(self) -> None:
         """Jump to the next match (the ``n`` key)."""

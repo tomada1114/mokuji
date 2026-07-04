@@ -40,6 +40,7 @@ TREE_HINTS: tuple[TieredHint, ...] = (
     ("Esc", "back to content", 1),
     ("Tab", "switch focus", 2),
     (".", "all files", 0),
+    ("/", "filter", 0),
     ("e", "close pane", 0),
     ("?", "help", 0),
 )

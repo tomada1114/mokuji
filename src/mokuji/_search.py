@@ -15,6 +15,26 @@ class Match:
     line: int
 
 
+def _smart_case_pair(text: str, query: str) -> tuple[str, str]:
+    """Lowercase both *text* and *query* iff *query* is itself all-lowercase."""
+    if query == query.lower():
+        return text.lower(), query.lower()
+    return text, query
+
+
+def smart_case_contains(haystack: str, needle: str) -> bool:
+    """Whether *needle* occurs in *haystack*.
+
+    Same smart-case rule as :func:`find_matches`: an all-lowercase
+    *needle* matches case-insensitively; one with any uppercase letter
+    matches case-sensitively.
+    """
+    if not needle:
+        return True
+    hay, need = _smart_case_pair(haystack, needle)
+    return need in hay
+
+
 def find_matches(text: str, query: str) -> tuple[Match, ...]:
     """Find non-overlapping substring matches of *query* in *text*.
 
@@ -24,11 +44,7 @@ def find_matches(text: str, query: str) -> tuple[Match, ...]:
     """
     if not query or not text:
         return ()
-    haystack = text
-    needle = query
-    if query == query.lower():
-        haystack = text.lower()
-        needle = query.lower()
+    haystack, needle = _smart_case_pair(text, query)
     line_starts = [0]
     line_starts.extend(index + 1 for index, char in enumerate(text) if char == "\n")
     matches: list[Match] = []

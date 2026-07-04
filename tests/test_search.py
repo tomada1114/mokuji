@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from mokuji._search import Match, find_matches, line_text_with_span, windowed_excerpt
+from mokuji._search import (
+    Match,
+    find_matches,
+    line_text_with_span,
+    smart_case_contains,
+    windowed_excerpt,
+)
 
 
 class TestFindMatches:
@@ -99,3 +105,19 @@ class TestWindowedExcerpt:
         assert excerpt.startswith("…")
         assert not excerpt.endswith("…")
         assert excerpt[start:end] == "needle"
+
+
+class TestSmartCaseContains:
+    def test_empty_needle_always_matches(self):
+        assert smart_case_contains("anything", "")
+
+    def test_lowercase_needle_matches_case_insensitively(self):
+        assert smart_case_contains("Alpha Beta", "alpha")
+        assert smart_case_contains("ALPHA BETA", "alpha")
+
+    def test_uppercase_needle_matches_case_sensitively(self):
+        assert smart_case_contains("Alpha Beta", "Alpha")
+        assert not smart_case_contains("alpha beta", "Alpha")
+
+    def test_absent_needle_does_not_match(self):
+        assert not smart_case_contains("alpha beta", "gamma")

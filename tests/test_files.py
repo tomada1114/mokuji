@@ -10,7 +10,9 @@ from mokuji._files import (
     MAX_FILE_SIZE,
     FileKind,
     classify_file,
+    is_hidden_by_default,
     is_markdown,
+    matching_descendant_paths,
 )
 
 
@@ -97,3 +99,74 @@ class TestClassifyFile:
         with pytest.raises(DocumentLoadError) as excinfo:
             classify_file(path)
         assert isinstance(excinfo.value.__cause__, OSError)
+
+
+class TestIsHiddenByDefault:
+    def test_dotfile_is_hidden(self, tmp_path):
+        path = tmp_path / ".env"
+        path.write_text("x", encoding="utf-8")
+        assert is_hidden_by_default(path)
+
+    def test_dot_directory_is_hidden(self, tmp_path):
+        path = tmp_path / ".venv"
+        path.mkdir()
+        assert is_hidden_by_default(path)
+
+    def test_ignored_dir_name_is_hidden(self, tmp_path):
+        path = tmp_path / "node_modules"
+        path.mkdir()
+        assert is_hidden_by_default(path)
+
+    def test_non_markdown_file_is_hidden(self, tmp_path):
+        path = tmp_path / "script.py"
+        path.write_text("x", encoding="utf-8")
+        assert is_hidden_by_default(path)
+
+    def test_markdown_file_is_not_hidden(self, tmp_path):
+        path = tmp_path / "guide.md"
+        path.write_text("x", encoding="utf-8")
+        assert not is_hidden_by_default(path)
+
+    def test_plain_directory_is_not_hidden(self, tmp_path):
+        path = tmp_path / "docs"
+        path.mkdir()
+        assert not is_hidden_by_default(path)
+
+
+class TestMatchingDescendantPaths:
+    def test_matches_and_ancestors_are_kept(self, tmp_path):
+        (tmp_path / "docs").mkdir()
+        (tmp_path / "docs" / "guide.md").write_text("# g\n", encoding="utf-8")
+        (tmp_path / "other.md").write_text("# o\n", encoding="utf-8")
+        keep = matching_descendant_paths(tmp_path, "guide", show_all=False)
+        assert tmp_path / "docs" / "guide.md" in keep
+        assert tmp_path / "docs" in keep
+        assert (tmp_path / "other.md") not in keep
+
+    def test_empty_query_returns_empty_set(self, tmp_path):
+        (tmp_path / "a.md").write_text("x", encoding="utf-8")
+        assert matching_descendant_paths(tmp_path, "", show_all=False) == set()
+
+    def test_default_mode_ignores_hidden_entries(self, tmp_path):
+        (tmp_path / ".venv").mkdir()
+        (tmp_path / ".venv" / "needle.txt").write_text("x", encoding="utf-8")
+        keep = matching_descendant_paths(tmp_path, "needle", show_all=False)
+        assert keep == set()
+
+    def test_show_all_mode_includes_dotfiles(self, tmp_path):
+        (tmp_path / ".venv").mkdir()
+        (tmp_path / ".venv" / "needle.txt").write_text("x", encoding="utf-8")
+        keep = matching_descendant_paths(tmp_path, "needle", show_all=True)
+        assert tmp_path / ".venv" / "needle.txt" in keep
+        assert tmp_path / ".venv" in keep
+
+    def test_git_directory_never_included(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        (tmp_path / ".git" / "needle").write_text("x", encoding="utf-8")
+        keep = matching_descendant_paths(tmp_path, "needle", show_all=True)
+        assert keep == set()
+
+    def test_smart_case_query_matches_case_insensitively(self, tmp_path):
+        (tmp_path / "Guide.md").write_text("x", encoding="utf-8")
+        keep = matching_descendant_paths(tmp_path, "guide", show_all=False)
+        assert tmp_path / "Guide.md" in keep
