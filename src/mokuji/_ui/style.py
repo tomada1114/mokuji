@@ -181,4 +181,31 @@ TourScreen {{
     content-align: center middle;
     text-align: center;
 }}
+RepoSearchScreen {{
+    align: center middle;
+}}
+#repo-search-panel {{
+    width: 82;
+    max-width: 96%;
+    height: auto;
+    max-height: 96%;
+    overflow-y: auto;
+    background: {BG_PANEL};
+    border: round {TEXT_FAINT};
+    padding: 1 2;
+}}
+#repo-search-input {{
+    border: none;
+    background: {BG_CHROME};
+}}
+#repo-search-body {{
+    height: auto;
+    color: {TEXT_SECONDARY};
+    margin-top: 1;
+}}
+#repo-search-hints {{
+    color: {TEXT_MUTED};
+    text-align: center;
+    margin-top: 1;
+}}
 """

@@ -17,6 +17,7 @@ from .footer import TREE_HINTS, KeyGuide
 from .help import HelpScreen
 from .keys import KeySequenceMachine
 from .navigator import TabNavigator
+from .repo_search import RepoSearchScreen
 from .search import SearchController, SearchInput
 from .sidebar import FilesTree, Sidebar, SidebarMode, TocTree
 from .style import APP_CSS
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
     from textual.app import ComposeResult
 
     from .._document import Heading
+    from .._repo_search import Hit
 
 NARROW_WIDTH = 80
 TINY_WIDTH = 40
@@ -49,6 +51,7 @@ class MokujiApp(App[None]):
         Binding("x", "close_tab", "close tab"),
         Binding("ctrl+o", "history_back", "back"),
         Binding("ctrl+i", "history_forward", "forward"),
+        Binding("S", "open_repo_search", "search all"),
         Binding("question_mark", "help", "help"),
         Binding("ctrl+g", "toggle_guide", "toggle key guide", show=False),
     ]
@@ -273,6 +276,26 @@ class MokujiApp(App[None]):
         # A new tab keeps whatever document the user already had open.
         await self.open_in_new_tab(tutorial_path())
         self.query_one(ViewerPane).focus()
+
+    def action_open_repo_search(self) -> None:
+        """Open the repo-wide search modal (the ``S`` key)."""
+        self.push_screen(RepoSearchScreen(self._root), self._on_repo_search_closed)
+
+    async def _on_repo_search_closed(self, result: tuple[Hit, str] | None) -> None:
+        """Open the selected hit's file at its line, seeding the in-file search."""
+        if result is None:
+            return
+        hit, query = result
+        path = self._root / hit.path
+        await self.open_in_new_tab(path)
+        self.call_after_refresh(self._seed_search_at_hit, path, hit.line, query)
+
+    def _seed_search_at_hit(self, path: Path, line: int, query: str) -> None:
+        viewer = self.query_one(ViewerPane)
+        if viewer.document is None or viewer.document.path != path:
+            return  # the file failed to open; nothing to seed
+        viewer.scroll_to_line(line)
+        self._search.submit(query)
 
     def action_toggle_guide(self) -> None:
         """Show or hide the footer key guide (ctrl+g, session-scoped)."""
