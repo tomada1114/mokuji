@@ -38,13 +38,13 @@ async def open_from_tree(pilot, app, name):
 
 
 class TestTabHelpers:
-    def test_unique_names_use_bare_file_names(self):
+    def test_unique_names_get_a_one_based_index_prefix(self):
         labels = tab_labels([Path("/a/README.md"), Path("/a/usage.md")])
-        assert labels == ["README.md", "usage.md"]
+        assert labels == ["1 README.md", "2 usage.md"]
 
-    def test_duplicate_names_get_parent_directory_suffix(self):
+    def test_duplicate_names_get_index_prefix_and_parent_directory_suffix(self):
         labels = tab_labels([Path("/a/docs/usage.md"), Path("/a/other/usage.md")])
-        assert labels == ["usage.md (docs)", "usage.md (other)"]
+        assert labels == ["1 usage.md (docs)", "2 usage.md (other)"]
 
     def test_next_tab_wraps_around(self):
         assert next_tab_index(1, None, 2) == 0
@@ -206,5 +206,5 @@ class TestTabLifecycle:
             await app.open_in_new_tab(tmp_path / "other" / "usage.md")
             await pilot.pause()
             labels = [str(tab.label) for tab in app.query(Tab)]
-            assert "usage.md (docs)" in labels
-            assert "usage.md (other)" in labels
+            assert "2 usage.md (docs)" in labels
+            assert "3 usage.md (other)" in labels

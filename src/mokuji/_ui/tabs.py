@@ -25,12 +25,17 @@ class TabState:
 
 
 def tab_labels(paths: Sequence[Path]) -> list[str]:
-    """Build tab labels: file names, disambiguated with the parent dir."""
+    """Build tab labels: 1-based index + name, disambiguated with the parent dir.
+
+    The index matches ``<N>gt`` (also 1-based) so the tab bar tells the
+    user exactly which digits to type.
+    """
     counts = Counter(path.name for path in paths)
-    return [
+    names = [
         f"{path.name} ({path.parent.name})" if counts[path.name] > 1 else path.name
         for path in paths
     ]
+    return [f"{index} {name}" for index, name in enumerate(names, start=1)]
 
 
 def next_tab_index(active: int, count: int | None, total: int) -> int:
