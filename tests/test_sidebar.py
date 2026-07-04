@@ -167,7 +167,56 @@ class TestMarkdownFilter:
             assert "README.md" in names
             assert "assets" in names
             assert "script.py" not in names
-            assert "blob.bin" not in names
+
+    async def test_dot_entries_and_ignore_set_hidden_by_default(self, tmp_path):
+        make_workspace(tmp_path)
+        (tmp_path / ".venv").mkdir()
+        (tmp_path / ".github").mkdir()
+        (tmp_path / ".env").write_text("SECRET=1\n", encoding="utf-8")
+        (tmp_path / "node_modules").mkdir()
+        (tmp_path / "__pycache__").mkdir()
+        (tmp_path / "dist").mkdir()
+        (tmp_path / "build").mkdir()
+        (tmp_path / "target").mkdir()
+        (tmp_path / ".tox").mkdir()
+        (tmp_path / ".mypy_cache").mkdir()
+        (tmp_path / ".ruff_cache").mkdir()
+        (tmp_path / ".pytest_cache").mkdir()
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            names = root_names(app)
+            for hidden in (
+                ".venv",
+                ".github",
+                ".env",
+                "node_modules",
+                "__pycache__",
+                "dist",
+                "build",
+                "target",
+                ".tox",
+                ".mypy_cache",
+                ".ruff_cache",
+                ".pytest_cache",
+            ):
+                assert hidden not in names
+            assert "README.md" in names
+
+    async def test_show_all_reveals_dot_entries_and_ignore_set_but_not_git(
+        self, tmp_path
+    ):
+        make_workspace(tmp_path)
+        (tmp_path / ".venv").mkdir()
+        (tmp_path / "node_modules").mkdir()
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await show_all_files(pilot, app)
+            names = root_names(app)
+            assert ".venv" in names
+            assert "node_modules" in names
+            assert ".git" not in names
 
     async def test_dot_toggles_all_files_visible(self, tmp_path):
         app = make_app(tmp_path)

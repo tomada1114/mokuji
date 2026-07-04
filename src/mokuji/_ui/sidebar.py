@@ -32,6 +32,20 @@ NOT_MARKDOWN = "(not a Markdown file)"
 NO_MARKDOWN_FILES = "(no markdown files)"
 EMPTY_DIRECTORY = "(empty)"
 
+IGNORED_ENTRIES = frozenset(
+    {
+        "node_modules",
+        "__pycache__",
+        "dist",
+        "build",
+        "target",
+        ".tox",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".pytest_cache",
+    }
+)
+
 _VIM_TREE_BINDINGS: list[BindingType] = [
     Binding("j", "cursor_down", "down", show=False),
     Binding("k", "cursor_up", "up", show=False),
@@ -84,11 +98,17 @@ class FilesTree(DirectoryTree):
         await self.reload()
 
     def filter_paths(self, paths: Iterable[Path]) -> Iterable[Path]:
-        """Hide ``.git``; hide non-Markdown files unless showing all."""
+        """Hide ``.git``; hide dotfiles/build-noise/non-Markdown unless showing all."""
         visible = [path for path in paths if path.name != ".git"]
         if self.show_all:
             return visible
-        return [path for path in visible if path.is_dir() or is_markdown(path)]
+        return [
+            path
+            for path in visible
+            if not path.name.startswith(".")
+            and path.name not in IGNORED_ENTRIES
+            and (path.is_dir() or is_markdown(path))
+        ]
 
     def render_label(
         self, node: TreeNode[DirEntry], base_style: Style, style: Style
