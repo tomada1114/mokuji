@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from .._search import Match
 
 BINARY_NOTICE = "binary file — cannot display"
+LARGE_FILE_UNAVAILABLE_NOTICE = "large file — no longer available"
 EMPTY_NOTICE = "(empty file)"
 EMPTY_STATE_TEXT = "mokuji\n読 · read your docs\n\ne browse files   ·   ? help"
 
@@ -135,7 +136,10 @@ class ViewerPane(VerticalScroll):
         if document.kind is FileKind.BINARY:
             return Static(BINARY_NOTICE, classes="content notice")
         if document.kind is FileKind.TOO_LARGE:
-            size = document.path.stat().st_size
+            try:
+                size = document.path.stat().st_size
+            except OSError:
+                return Static(LARGE_FILE_UNAVAILABLE_NOTICE, classes="content notice")
             return Static(too_large_notice(size), classes="content notice")
         if not document.text:
             return Static(EMPTY_NOTICE, classes="content notice")

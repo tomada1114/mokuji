@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from textual.widgets import Markdown
 
+from mokuji._document import load_document
 from mokuji._ui.app import MokujiApp
 from mokuji._ui.footer import TREE_HINTS, KeyGuide
 from mokuji._ui.sidebar import FilesTree, Sidebar, SidebarMode, TocTree
@@ -286,6 +287,22 @@ class TestOpeningFiles:
             await pilot.press("enter")
             await pilot.pause()
             assert app.query_one(Markdown) is not None
+
+    async def test_large_file_deleted_before_render_shows_generic_notice(
+        self, tmp_path
+    ):
+        make_workspace(tmp_path)
+        big = tmp_path / "big.md"
+        big.write_bytes(b"# Big\n" + b"x" * (2 * 1024 * 1024))
+        document = load_document(big)
+        big.unlink()
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            viewer = app.query_one(ViewerPane)
+            await viewer.show_document(document)
+            notice = app.query_one(".notice")
+            assert "large file" in str(notice.render())
 
     async def test_enter_opens_file_and_focuses_viewer(self, tmp_path):
         make_workspace(tmp_path)
