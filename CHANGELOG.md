@@ -7,17 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- FILES pane now hides non-Markdown files by default; press `.` in the
-  tree to toggle between Markdown-only and all files (the footer flashes
-  the new state, and the key guide/help list the key)
-
 ### Added
 
 - Expanding a directory with nothing to show now displays a dim
   placeholder row: `(no markdown files)` when entries are filtered out,
   `(empty)` when the directory is truly empty
+- A five-page welcome tour on first launch, ending in a bundled
+  hands-on tutorial document; replay it any time with `?` then `w`
+- Repo-wide search (`S`): a modal that searches every Markdown file in
+  the project, groups hits by file, and on `Enter` opens the selected
+  hit at its line, seeding the in-file search with the same query
+- Type-to-filter (`/`) in the FILES/TOC trees: narrows the tree to
+  substring matches (smart case), keeping matched files' ancestor
+  directories visible; `Esc` restores the full tree
+- `Ctrl+d`/`Ctrl+u`/`Ctrl+f`/`Ctrl+b` as scroll aliases for `d`/`u`/`f`/`b`
+
+### Changed
+
+- FILES pane now hides non-Markdown files by default; press `.` in the
+  tree to toggle between Markdown-only and all files (the footer flashes
+  the new state, and the key guide/help list the key)
+- FILES pane also hides dotfiles and common build/tooling directories
+  by default (`node_modules`, `__pycache__`, `dist`, `build`, `target`,
+  `.tox`, `.mypy_cache`, `.ruff_cache`, `.pytest_cache`); `.` still
+  reveals everything except `.git`
+- Key guide and help modal redesigned for discoverability: a
+  context-aware footer shows the keys that work right now, wraps
+  sensibly on narrow terminals, and `?` opens a fuller reference
+  covering the whole app
+- Launch focus and the FILES tree cursor now land where expected, and
+  tree files always open in a new tab rather than replacing the
+  current one
+- `e`/`t` are now focus-or-toggle instead of a plain toggle: a
+  visible-but-unfocused pane is focused first, and only a second press
+  hides it; `Esc` in a narrow-terminal overlay also dismisses it
+- Tab labels are now prefixed with their 1-based index (e.g.
+  `1 README.md`), matching the digit typed for `<N>gt`
+- Following a Markdown link now always navigates within the current
+  tab, even when the target is already open in another tab, so
+  `Ctrl+o` returns to where you were reading instead of another tab's
+  history
+- In-file search state is now per-tab: switching tabs no longer
+  silently clears an active search, and returning to a tab restores it
+- The in-file search footer status now shows the matched line's text
+  with the query span accented, instead of just a bare match counter
+- `gg`/`G` now route to the focused FILES/TOC tree (cursor to first/
+  last node) instead of always scrolling the (possibly hidden) viewer
+- Closing the last tab now moves focus to the FILES tree, showing it
+  if it was hidden
+
+### Fixed
+
+- Links with percent-escaped characters (e.g. `my%20file.md`) now
+  resolve correctly, and percent-encoded heading anchors match too
+- Heading slugs are now Unicode-aware, matching GitHub's anchor
+  generation for non-ASCII headings (previously non-ASCII headings
+  collapsed to an empty or colliding slug)
+- Internal links are now confined to the project root; a link that
+  resolves outside it is rejected with a flash instead of opening
+  arbitrary files on disk
+- Opening a file classified as too-large no longer crashes if the
+  underlying path disappears before it renders; it shows a placeholder
+  instead
+- The TOC pane shows a dedicated placeholder when no file is open,
+  instead of leaving the pane in an inconsistent state
 
 ## [0.1.0] - 2026-07-02
 
