@@ -265,7 +265,11 @@ class MokujiApp(App[None]):
         self._toggle_pane(SidebarMode.TOC)
 
     def action_focus_content(self) -> None:
-        """Return focus to the content pane."""
+        """Return focus to the content pane; dismiss a narrow overlay too."""
+        if self._narrow:
+            sidebar = self.query_one(Sidebar)
+            sidebar.display = False
+            sidebar.remove_class("-overlay")
         self.query_one(ViewerPane).focus()
 
     async def action_close_tab(self) -> None:
@@ -337,11 +341,22 @@ class MokujiApp(App[None]):
             self.flash(f"could not open browser: {url}")
 
     def _toggle_pane(self, mode: SidebarMode) -> None:
+        """Focus-or-toggle the left pane in *mode* (req U6).
+
+        Hidden -> show and focus the tree. Visible in *mode* but not
+        focused -> just focus the tree (the pane is already visible;
+        don't hide something the user hasn't looked at yet). Visible in
+        *mode* and focused -> hide it. Visible in a different mode ->
+        switch to *mode* and focus, as before.
+        """
         sidebar = self.query_one(Sidebar)
         if sidebar.display and sidebar.mode is mode:
-            sidebar.display = False
-            sidebar.remove_class("-overlay")
-            self.query_one(ViewerPane).focus()
+            if self.focused is sidebar.active_tree:
+                sidebar.display = False
+                sidebar.remove_class("-overlay")
+                self.query_one(ViewerPane).focus()
+            else:
+                sidebar.active_tree.focus()
             return
         if mode is SidebarMode.TOC:
             sidebar.set_document(self.query_one(ViewerPane).document)

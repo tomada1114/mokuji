@@ -105,7 +105,7 @@ class TestGuideWrapping:
         app = make_app(tmp_path)
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
-            await pilot.press("e", "e")
+            await pilot.press("e")
             await pilot.pause()
             text = footer_text(app)
             for fragment in (

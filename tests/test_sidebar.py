@@ -84,13 +84,25 @@ class TestPaneToggle:
             assert sidebar.display
             assert sidebar.mode is SidebarMode.FILES
 
-    async def test_e_closes_then_reopens_with_tree_focused(self, tmp_path):
+    async def test_e_is_focus_or_toggle_not_a_plain_toggle(self, tmp_path):
+        """e/t are focus-or-toggle (design.md §7), not a plain visibility toggle.
+
+        Launch state: sidebar visible, viewer focused. The first press
+        must focus the (already visible) tree rather than hiding a pane
+        the user can see but hasn't looked at yet; only a second press
+        (now that the tree has focus) hides it.
+        """
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
             sidebar = app.query_one(Sidebar)
+            assert isinstance(app.focused, ViewerPane)
+            await pilot.press("e")
+            assert sidebar.display
+            assert isinstance(app.focused, FilesTree)
             await pilot.press("e")
             assert not sidebar.display
+            assert isinstance(app.focused, ViewerPane)
             await pilot.press("e")
             assert sidebar.display
             assert isinstance(app.focused, FilesTree)
@@ -110,7 +122,7 @@ class TestPaneToggle:
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
-            await pilot.press("e", "e")
+            await pilot.press("e")
             assert isinstance(app.focused, FilesTree)
             await pilot.press("escape")
             assert isinstance(app.focused, ViewerPane)
@@ -409,3 +421,15 @@ class TestNarrowTerminal:
             sidebar = app.query_one(Sidebar)
             assert sidebar.display
             assert sidebar.has_class("-overlay")
+
+    async def test_escape_in_narrow_overlay_dismisses_it(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(70, 20)) as pilot:
+            await pilot.pause()
+            await pilot.press("e")
+            sidebar = app.query_one(Sidebar)
+            assert sidebar.display
+            assert sidebar.has_class("-overlay")
+            await pilot.press("escape")
+            assert not sidebar.display
+            assert isinstance(app.focused, ViewerPane)

@@ -89,7 +89,7 @@ class TestContextFooter:
             footer = app.query_one(KeyGuide)
             content_hints = str(footer.render())
             assert "j/k scroll" in content_hints
-            await pilot.press("e", "e")
+            await pilot.press("e")
             await pilot.pause()
             tree_hints = str(footer.render())
             assert tree_hints != content_hints
