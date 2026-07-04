@@ -60,7 +60,7 @@ class MokujiApp(App[None]):
         self._navigator = TabNavigator(self)
         self._search = SearchController(self)
         self._keys = KeySequenceMachine(
-            scroll_top=lambda: self.query_one(ViewerPane).scroll_top(),
+            scroll_top=self._gg_scroll_top,
             tab_next=self._navigator.tab_next,
             tab_prev=self._navigator.tab_prev,
         )
@@ -313,6 +313,18 @@ class MokujiApp(App[None]):
     def flash(self, message: str) -> None:
         """Show a transient footer message (the single feedback channel)."""
         self.query_one(KeyGuide).flash(message)
+
+    def _gg_scroll_top(self) -> None:
+        """Route ``gg`` to whichever pane is focused (req B5).
+
+        A focused FILES/TOC tree gets its cursor moved to the first
+        node; otherwise the viewer scrolls to the top, as before.
+        """
+        focused = self.focused
+        if isinstance(focused, FilesTree | TocTree):
+            focused.action_scroll_home()
+            return
+        self.query_one(ViewerPane).scroll_top()
 
     def _open_external(self, url: str) -> None:
         try:

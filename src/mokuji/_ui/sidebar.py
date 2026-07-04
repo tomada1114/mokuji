@@ -35,6 +35,7 @@ EMPTY_DIRECTORY = "(empty)"
 _VIM_TREE_BINDINGS: list[BindingType] = [
     Binding("j", "cursor_down", "down", show=False),
     Binding("k", "cursor_up", "up", show=False),
+    Binding("G", "scroll_end", "bottom", show=False),
     Binding("escape", "app.focus_content", "back to content", show=False),
 ]
 
