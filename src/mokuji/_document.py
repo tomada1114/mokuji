@@ -18,7 +18,7 @@ MAX_TOC_LEVEL = 4
 _ATX_HEADING = re.compile(r"^ {0,3}(#{1,6})\s+(.*?)\s*$")
 _TRAILING_HASHES = re.compile(r"\s+#+\s*$")
 _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
-_SLUG_DISALLOWED = re.compile(r"[^a-z0-9 _-]")
+_SLUG_DISALLOWED = re.compile(r"[^\w\s-]")
 
 
 @dataclass(frozen=True, slots=True)

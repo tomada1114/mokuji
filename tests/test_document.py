@@ -12,6 +12,7 @@ from mokuji._document import (
     UnsupportedLink,
     load_document,
     resolve_link,
+    slugify,
 )
 from mokuji._errors import DocumentLoadError
 from mokuji._files import MAX_FILE_SIZE, FileKind
@@ -146,6 +147,17 @@ class TestHeadingExtraction:
     def test_slug_strips_symbols_keeps_underscore_and_dash(self, tmp_path):
         document = load_document(_write_md(tmp_path, "d.md", "# a_b-c +d\n"))
         assert document.headings[0].slug == "a_b-c-d"
+
+    def test_slugify_keeps_cjk_word_characters(self):
+        assert slugify("日本語") == "日本語"
+
+    def test_slugify_keeps_accented_letters_lowercase(self):
+        assert slugify("Café Menu") == "café-menu"
+
+    def test_distinct_cjk_headings_get_distinct_slugs(self, tmp_path):
+        document = load_document(_write_md(tmp_path, "d.md", "# 日本語\n# 中文\n"))
+        slugs = [h.slug for h in document.headings]
+        assert slugs == ["日本語", "中文"]
 
     def test_duplicate_slugs_get_numeric_suffixes(self, tmp_path):
         text = "# Setup\n## Setup\n### Setup\n"
