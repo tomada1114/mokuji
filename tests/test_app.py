@@ -103,6 +103,28 @@ class TestScrolling:
             await pilot.press("b", "b")
             assert viewer.scroll_y == 0
 
+    async def test_ctrl_d_and_ctrl_u_alias_half_page_scroll(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            viewer = app.query_one(ViewerPane)
+            await pilot.press("ctrl+d")
+            half = viewer.scroll_y
+            assert 0 < half <= viewer.container_size.height
+            await pilot.press("ctrl+u")
+            assert viewer.scroll_y == 0
+
+    async def test_ctrl_f_and_ctrl_b_alias_full_page_scroll(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            viewer = app.query_one(ViewerPane)
+            await pilot.press("ctrl+f")
+            one_page = viewer.scroll_y
+            assert one_page > 0
+            await pilot.press("ctrl+b")
+            assert viewer.scroll_y == 0
+
 
 class TestKeySequenceMachine:
     async def test_lone_g_then_j_still_scrolls(self, tmp_path):
@@ -124,6 +146,42 @@ class TestKeySequenceMachine:
             assert viewer.scroll_y > 0
             await pilot.press("g")
             assert viewer.scroll_y == 0
+
+
+class TestTreeFocusRouting:
+    def _make_tree_app(self, tmp_path):
+        (tmp_path / "a.md").write_text(LONG_DOCUMENT, encoding="utf-8")
+        (tmp_path / "b.md").write_text("# B\n", encoding="utf-8")
+        (tmp_path / "c.md").write_text("# C\n", encoding="utf-8")
+        return MokujiApp(root=tmp_path, initial_file=tmp_path / "a.md")
+
+    async def test_gg_in_focused_tree_moves_cursor_not_viewer(self, tmp_path):
+        app = self._make_tree_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            viewer = app.query_one(ViewerPane)
+            await pilot.press("j", "j", "j")
+            scroll_before = viewer.scroll_y
+            assert scroll_before > 0
+            tree = app.query_one(FilesTree)
+            tree.focus()
+            await pilot.pause()
+            tree.cursor_line = 2
+            await pilot.press("g", "g")
+            await pilot.pause()
+            assert tree.cursor_line == 0
+            assert viewer.scroll_y == scroll_before
+
+    async def test_shift_g_in_focused_tree_moves_cursor_to_last_node(self, tmp_path):
+        app = self._make_tree_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            tree = app.query_one(FilesTree)
+            tree.focus()
+            await pilot.pause()
+            await pilot.press("G")
+            await pilot.pause()
+            assert tree.cursor_line == tree.last_line
 
 
 class TestQuit:

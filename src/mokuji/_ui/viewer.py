@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from .._search import Match
 
 BINARY_NOTICE = "binary file — cannot display"
+LARGE_FILE_UNAVAILABLE_NOTICE = "large file — no longer available"
 EMPTY_NOTICE = "(empty file)"
 EMPTY_STATE_TEXT = "mokuji\n読 · read your docs\n\ne browse files   ·   ? help"
 
@@ -48,10 +49,14 @@ class ViewerPane(VerticalScroll):
         Binding("j", "scroll_down", "scroll down", show=False),
         Binding("k", "scroll_up", "scroll up", show=False),
         Binding("d", "half_page_down", "half page down", show=False),
+        Binding("ctrl+d", "half_page_down", "half page down", show=False),
         Binding("u", "half_page_up", "half page up", show=False),
+        Binding("ctrl+u", "half_page_up", "half page up", show=False),
         Binding("f", "page_down", "page down", show=False),
+        Binding("ctrl+f", "page_down", "page down", show=False),
         Binding("space", "page_down", "page down", show=False),
         Binding("b", "page_up", "page up", show=False),
+        Binding("ctrl+b", "page_up", "page up", show=False),
         Binding("G", "scroll_bottom", "bottom", show=False),
         Binding("slash", "app.open_search", "search", show=False),
         Binding("n", "app.search_next", "next match", show=False),
@@ -135,7 +140,10 @@ class ViewerPane(VerticalScroll):
         if document.kind is FileKind.BINARY:
             return Static(BINARY_NOTICE, classes="content notice")
         if document.kind is FileKind.TOO_LARGE:
-            size = document.path.stat().st_size
+            try:
+                size = document.path.stat().st_size
+            except OSError:
+                return Static(LARGE_FILE_UNAVAILABLE_NOTICE, classes="content notice")
             return Static(too_large_notice(size), classes="content notice")
         if not document.text:
             return Static(EMPTY_NOTICE, classes="content notice")

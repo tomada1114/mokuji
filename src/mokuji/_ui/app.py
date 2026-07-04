@@ -17,10 +17,12 @@ from .footer import TREE_HINTS, KeyGuide
 from .help import HelpScreen
 from .keys import KeySequenceMachine
 from .navigator import TabNavigator
+from .repo_search import RepoSearchScreen
 from .search import SearchController, SearchInput
 from .sidebar import FilesTree, Sidebar, SidebarMode, TocTree
 from .style import APP_CSS
 from .tour import TourScreen, tutorial_path
+from .tree_filter import TreeFilterController
 from .viewer import ViewerPane
 
 if TYPE_CHECKING:
@@ -30,6 +32,7 @@ if TYPE_CHECKING:
     from textual.app import ComposeResult
 
     from .._document import Heading
+    from .._repo_search import Hit
 
 NARROW_WIDTH = 80
 TINY_WIDTH = 40
@@ -48,6 +51,7 @@ class MokujiApp(App[None]):
         Binding("x", "close_tab", "close tab"),
         Binding("ctrl+o", "history_back", "back"),
         Binding("ctrl+i", "history_forward", "forward"),
+        Binding("S", "open_repo_search", "search all"),
         Binding("question_mark", "help", "help"),
         Binding("ctrl+g", "toggle_guide", "toggle key guide", show=False),
     ]
@@ -59,8 +63,9 @@ class MokujiApp(App[None]):
         self._initial_file = initial_file.resolve() if initial_file else None
         self._navigator = TabNavigator(self)
         self._search = SearchController(self)
+        self._tree_filter = TreeFilterController(self)
         self._keys = KeySequenceMachine(
-            scroll_top=lambda: self.query_one(ViewerPane).scroll_top(),
+            scroll_top=self._gg_scroll_top,
             tab_next=self._navigator.tab_next,
             tab_prev=self._navigator.tab_prev,
         )
@@ -188,20 +193,37 @@ class MokujiApp(App[None]):
         if index is not None and index != self._navigator.active_index:
             await self._navigator.switch_to(index)
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Confirm the search query typed into the footer input."""
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Confirm the search query or type-to-filter typed into the footer."""
         if event.input.id != "search-input":
             return
         event.stop()
-        self._search.submit(event.value)
+        if self._tree_filter.is_active:
+            await self._tree_filter.submit(event.value)
+        else:
+            self._search.submit(event.value)
+
+    async def on_input_changed(self, event: Input.Changed) -> None:
+        """Live-narrow the tree while the type-to-filter input is open (req U1b)."""
+        if event.input.id != "search-input" or not self._tree_filter.is_active:
+            return
+        event.stop()
+        await self._tree_filter.on_query_changed(event.value)
 
     def action_open_search(self) -> None:
         """Open the search input over the footer (the ``/`` key)."""
         self._search.open_input()
 
-    def action_cancel_search(self) -> None:
-        """Cancel the search input (escape while typing)."""
-        self._search.cancel_input()
+    def action_open_tree_filter(self) -> None:
+        """Open the search input for tree type-to-filter (``/`` in a tree)."""
+        self._tree_filter.open_input()
+
+    async def action_cancel_search(self) -> None:
+        """Cancel the search input or tree filter (escape while typing)."""
+        if self._tree_filter.is_active:
+            await self._tree_filter.cancel()
+        else:
+            self._search.cancel_input()
 
     def action_search_next(self) -> None:
         """Jump to the next match (the ``n`` key)."""
@@ -218,6 +240,14 @@ class MokujiApp(App[None]):
     def dismiss_search(self) -> None:
         """Drop any active search; called on every navigation."""
         self._search.dismiss()
+
+    def search_snapshot(self) -> tuple[str, int] | None:
+        """Return the active search's ``(query, index)``, if any (req U2)."""
+        return self._search.snapshot()
+
+    def restore_search(self, query: str, index: int) -> None:
+        """Re-run a stashed search against the newly rendered document (req U2)."""
+        self._search.restore(query, index)
 
     def on_descendant_focus(self, event: events.DescendantFocus) -> None:
         """Keep the footer hints matched to the focused region (req 2.7)."""
@@ -247,6 +277,26 @@ class MokujiApp(App[None]):
         await self.open_in_new_tab(tutorial_path())
         self.query_one(ViewerPane).focus()
 
+    def action_open_repo_search(self) -> None:
+        """Open the repo-wide search modal (the ``S`` key)."""
+        self.push_screen(RepoSearchScreen(self._root), self._on_repo_search_closed)
+
+    async def _on_repo_search_closed(self, result: tuple[Hit, str] | None) -> None:
+        """Open the selected hit's file at its line, seeding the in-file search."""
+        if result is None:
+            return
+        hit, query = result
+        path = self._root / hit.path
+        await self.open_in_new_tab(path)
+        self.call_after_refresh(self._seed_search_at_hit, path, hit.line, query)
+
+    def _seed_search_at_hit(self, path: Path, line: int, query: str) -> None:
+        viewer = self.query_one(ViewerPane)
+        if viewer.document is None or viewer.document.path != path:
+            return  # the file failed to open; nothing to seed
+        viewer.scroll_to_line(line)
+        self._search.submit(query)
+
     def action_toggle_guide(self) -> None:
         """Show or hide the footer key guide (ctrl+g, session-scoped)."""
         footer = self.query_one(KeyGuide)
@@ -265,7 +315,11 @@ class MokujiApp(App[None]):
         self._toggle_pane(SidebarMode.TOC)
 
     def action_focus_content(self) -> None:
-        """Return focus to the content pane."""
+        """Return focus to the content pane; dismiss a narrow overlay too."""
+        if self._narrow:
+            sidebar = self.query_one(Sidebar)
+            sidebar.display = False
+            sidebar.remove_class("-overlay")
         self.query_one(ViewerPane).focus()
 
     async def action_close_tab(self) -> None:
@@ -290,6 +344,10 @@ class MokujiApp(App[None]):
         """Open *path* in a new tab, focusing an existing tab if open."""
         await self._navigator.open_in_new_tab(path)
 
+    async def open_link(self, path: Path, *, anchor: str | None = None) -> None:
+        """Navigate to *path* in the current tab (never hijacks another tab)."""
+        await self._navigator.open_link(path, anchor=anchor)
+
     async def follow_link(self, href: str) -> None:
         """Follow a Markdown link per req 2.8."""
         document = self._navigator.active_document
@@ -300,16 +358,31 @@ class MokujiApp(App[None]):
             self._open_external(target.url)
             return
         if isinstance(target, InternalLink):
+            if not target.path.is_relative_to(self._root):
+                self.flash(f"link outside project: {href}")
+                return
             if not target.path.exists():
                 self.flash(f"not found: {href}")
                 return
-            await self.open_path(target.path, anchor=target.anchor)
+            await self.open_link(target.path, anchor=target.anchor)
             return
         self.flash(f"unsupported link: {href}")
 
     def flash(self, message: str) -> None:
         """Show a transient footer message (the single feedback channel)."""
         self.query_one(KeyGuide).flash(message)
+
+    def _gg_scroll_top(self) -> None:
+        """Route ``gg`` to whichever pane is focused (req B5).
+
+        A focused FILES/TOC tree gets its cursor moved to the first
+        node; otherwise the viewer scrolls to the top, as before.
+        """
+        focused = self.focused
+        if isinstance(focused, FilesTree | TocTree):
+            focused.action_scroll_home()
+            return
+        self.query_one(ViewerPane).scroll_top()
 
     def _open_external(self, url: str) -> None:
         try:
@@ -322,11 +395,22 @@ class MokujiApp(App[None]):
             self.flash(f"could not open browser: {url}")
 
     def _toggle_pane(self, mode: SidebarMode) -> None:
+        """Focus-or-toggle the left pane in *mode* (req U6).
+
+        Hidden -> show and focus the tree. Visible in *mode* but not
+        focused -> just focus the tree (the pane is already visible;
+        don't hide something the user hasn't looked at yet). Visible in
+        *mode* and focused -> hide it. Visible in a different mode ->
+        switch to *mode* and focus, as before.
+        """
         sidebar = self.query_one(Sidebar)
         if sidebar.display and sidebar.mode is mode:
-            sidebar.display = False
-            sidebar.remove_class("-overlay")
-            self.query_one(ViewerPane).focus()
+            if self.focused is sidebar.active_tree:
+                sidebar.display = False
+                sidebar.remove_class("-overlay")
+                self.query_one(ViewerPane).focus()
+            else:
+                sidebar.active_tree.focus()
             return
         if mode is SidebarMode.TOC:
             sidebar.set_document(self.query_one(ViewerPane).document)

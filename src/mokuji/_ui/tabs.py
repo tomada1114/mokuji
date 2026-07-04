@@ -22,15 +22,22 @@ class TabState:
     history: list[tuple[Path, str | None]] = field(default_factory=list)
     history_index: int = 0
     scroll_y: float = 0.0
+    search_query: str | None = None
+    search_match_index: int = 0
 
 
 def tab_labels(paths: Sequence[Path]) -> list[str]:
-    """Build tab labels: file names, disambiguated with the parent dir."""
+    """Build tab labels: 1-based index + name, disambiguated with the parent dir.
+
+    The index matches ``<N>gt`` (also 1-based) so the tab bar tells the
+    user exactly which digits to type.
+    """
     counts = Counter(path.name for path in paths)
-    return [
+    names = [
         f"{path.name} ({path.parent.name})" if counts[path.name] > 1 else path.name
         for path in paths
     ]
+    return [f"{index} {name}" for index, name in enumerate(names, start=1)]
 
 
 def next_tab_index(active: int, count: int | None, total: int) -> int:

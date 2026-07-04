@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from ._errors import DocumentLoadError
 from ._files import FileKind, classify_file, is_markdown
@@ -18,7 +18,7 @@ MAX_TOC_LEVEL = 4
 _ATX_HEADING = re.compile(r"^ {0,3}(#{1,6})\s+(.*?)\s*$")
 _TRAILING_HASHES = re.compile(r"\s+#+\s*$")
 _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
-_SLUG_DISALLOWED = re.compile(r"[^a-z0-9 _-]")
+_SLUG_DISALLOWED = re.compile(r"[^\w\s-]")
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,16 +146,19 @@ def load_document(path: Path, *, allow_large: bool = False) -> Document:
 def resolve_link(base: Path, href: str) -> LinkTarget:
     """Resolve a Markdown *href* found in the document at *base*.
 
-    Relative paths resolve against ``base.parent``; ``Path.resolve()``
-    clamps ``..`` traversal at the filesystem root.
+    Relative paths resolve against ``base.parent``. ``Path.resolve()``
+    only clamps ``..`` traversal at the filesystem root — it does
+    **not** confine the result to any project root. Callers that need
+    root confinement (mokuji's link-following does) must check the
+    resolved path themselves.
     """
     parts = urlsplit(href)
     if parts.scheme in {"http", "https"}:
         return ExternalLink(url=href)
     if parts.scheme:
         return UnsupportedLink(href=href)
-    anchor = parts.fragment or None
+    anchor = unquote(parts.fragment) or None
     if not parts.path:
         return InternalLink(path=base.resolve(), anchor=anchor)
-    target = (base.parent / parts.path).resolve()
+    target = (base.parent / unquote(parts.path)).resolve()
     return InternalLink(path=target, anchor=anchor)

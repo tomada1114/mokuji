@@ -12,6 +12,7 @@ from mokuji._document import (
     UnsupportedLink,
     load_document,
     resolve_link,
+    slugify,
 )
 from mokuji._errors import DocumentLoadError
 from mokuji._files import MAX_FILE_SIZE, FileKind
@@ -147,6 +148,17 @@ class TestHeadingExtraction:
         document = load_document(_write_md(tmp_path, "d.md", "# a_b-c +d\n"))
         assert document.headings[0].slug == "a_b-c-d"
 
+    def test_slugify_keeps_cjk_word_characters(self):
+        assert slugify("日本語") == "日本語"
+
+    def test_slugify_keeps_accented_letters_lowercase(self):
+        assert slugify("Café Menu") == "café-menu"
+
+    def test_distinct_cjk_headings_get_distinct_slugs(self, tmp_path):
+        document = load_document(_write_md(tmp_path, "d.md", "# 日本語\n# 中文\n"))
+        slugs = [h.slug for h in document.headings]
+        assert slugs == ["日本語", "中文"]
+
     def test_duplicate_slugs_get_numeric_suffixes(self, tmp_path):
         text = "# Setup\n## Setup\n### Setup\n"
         document = load_document(_write_md(tmp_path, "d.md", text))
@@ -198,13 +210,35 @@ class TestResolveLink:
         target = resolve_link(tmp_path / "a.md", "ftp://host/file")
         assert target == UnsupportedLink(href="ftp://host/file")
 
-    def test_traversal_never_escapes_filesystem_root(self, tmp_path):
+    def test_percent_encoded_path_is_decoded(self, tmp_path):
+        base = tmp_path / "docs" / "a.md"
+        target = resolve_link(base, "my%20file.md")
+        assert target == InternalLink(
+            path=(tmp_path / "docs" / "my file.md").resolve(), anchor=None
+        )
+
+    def test_percent_encoded_fragment_is_decoded(self, tmp_path):
         base = tmp_path / "a.md"
+        target = resolve_link(base, "#caf%C3%A9")
+        assert target == InternalLink(path=base.resolve(), anchor="café")
+
+    def test_resolve_link_clamps_at_filesystem_root_not_project_root(self, tmp_path):
+        """resolve_link() has no project-root confinement (real contract).
+
+        ``Path.resolve()`` only prevents ``..`` from escaping the OS
+        filesystem root; it happily resolves outside any project
+        directory. Root confinement is enforced by the caller
+        (``app.follow_link``), not here.
+        """
+        project = tmp_path / "project"
+        project.mkdir()
+        base = project / "a.md"
         href = "../" * 100 + "etc/passwd"
         target = resolve_link(base, href)
         assert isinstance(target, InternalLink)
         assert ".." not in target.path.parts
         assert target.path.is_absolute()
+        assert not target.path.is_relative_to(project)
 
     def test_document_types_are_value_objects(self, tmp_path):
         base = (tmp_path / "a.md").resolve()

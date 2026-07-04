@@ -32,6 +32,8 @@ uvx mokuji            # browse the current repository
   from Tokyo Night).
 - **In-file search** — `/` with smart case, `n`/`N` navigation, and match
   highlighting.
+- **Repo-wide search** — `S` opens a modal that searches every Markdown
+  file in the project and jumps straight to a hit.
 - Non-Markdown files are hidden from the tree by default (`.` shows
   them); they open read-only as plain text, and binary and oversized
   files are handled gracefully.
@@ -66,28 +68,34 @@ uvx mokuji
 | `d` / `u` | content | half page down / up |
 | `f` / `Space` / `b` | content | full page down / down / up |
 | `gg` / `G` | content | top / bottom |
-| `e` | global | toggle FILES pane |
-| `t` | global | toggle TOC pane |
+| `e` | global | focus FILES pane, opening it if hidden (press again to hide) |
+| `t` | global | focus TOC pane, opening it if hidden (press again to hide) |
 | `Tab` | global | cycle focus tree ↔ content |
 | `Enter` | tree | open file in a new tab (focus moves to content) / expand directory |
 | `.` | tree | toggle non-Markdown files (hidden by default) |
+| `/` | tree | filter tree by name |
 | `Enter` | TOC | jump to heading |
 | `gt` / `gT` / `<N>gt` | global | next / previous / Nth tab |
 | `x` | global | close tab |
 | `Ctrl+o` / `Ctrl+i` | content | history back / forward |
 | `/` | content | search in file |
 | `n` / `N` | content | next / previous match (wraps) |
+| `S` | global | search across every Markdown file in the project |
 | `r` | content | reload file, keeping scroll position |
 | `?` | global | help (also closes it; `Esc` too) |
 | `Ctrl+g` | global | toggle the footer key guide |
 | `q` | global | quit |
 
+Tab labels are prefixed with their 1-based index (`1 README.md`), matching
+the digit you type for `<N>gt`.
+
 ## Known Limitations
 
 - **Search highlighting in Markdown**: rendered Markdown has no public
   API for inline highlights, so mokuji jumps to matches and shows a
-  `match N/M · line L` counter in the footer instead. Plain-text files
-  get full inline highlighting.
+  `match N/M · line L · <matched line excerpt>` status in the footer
+  instead, with the query accented. Plain-text files get full inline
+  highlighting.
 - **Link following is mouse-driven**: Textual's Markdown widget has no
   per-link keyboard focus, so links are followed by clicking them.
   Keyboard navigation covers everything else.

@@ -9,7 +9,7 @@ from textual.widgets import Markdown, Tab, Tabs
 
 from .._document import load_document
 from .._errors import DocumentLoadError
-from .sidebar import Sidebar
+from .sidebar import FilesTree, Sidebar, SidebarMode
 from .tabs import TabState, next_tab_index, prev_tab_index, tab_labels
 from .viewer import ViewerPane
 
@@ -67,6 +67,16 @@ class TabNavigator:
             return
         await self._navigate_current(resolved, anchor, allow_large=allow_large)
 
+    async def open_link(self, path: Path, *, anchor: str | None = None) -> None:
+        """Navigate to *path* within the CURRENT tab (Markdown link following).
+
+        Unlike :meth:`open_path` (used by tree/search opens), this never
+        switches to another tab that already has *path* open — Ctrl+o
+        must return to where the user was reading, not into some other
+        tab's history.
+        """
+        await self._navigate_current(path.resolve(), anchor)
+
     async def open_in_new_tab(self, path: Path) -> None:
         """Open *path* in a new tab, focusing an existing tab if open."""
         resolved = path.resolve()
@@ -79,6 +89,7 @@ class TabNavigator:
         if document is None:
             return
         self._save_scroll()
+        self._stash_search()
         state = TabState(
             document=document,
             tab_id=f"tab-{next(self._uid)}",
@@ -90,7 +101,7 @@ class TabNavigator:
         await tabs.add_tab(Tab(state.document.path.name, id=state.tab_id))
         tabs.active = state.tab_id
         self._update_tab_bar()
-        await self._render_active()
+        await self._render_active(restore_search=True)
 
     async def close_tab(self) -> None:
         """Close the current tab; the last close shows the empty state."""
@@ -104,12 +115,16 @@ class TabNavigator:
         await self._app.query_one(Tabs).remove_tab(state.tab_id)
         if not self._states:
             await self._app.query_one(ViewerPane).show_empty()
-            self._app.query_one(Sidebar).set_document(None)
+            sidebar = self._app.query_one(Sidebar)
+            sidebar.set_document(None)
             self._update_tab_bar()
+            sidebar.show_mode(SidebarMode.FILES)
+            sidebar.display = True
+            self._app.query_one(FilesTree).focus()
             return
         self._app.query_one(Tabs).active = self._states[self._active].tab_id
         self._update_tab_bar()
-        await self._render_active(restore_scroll=True)
+        await self._render_active(restore_scroll=True, restore_search=True)
 
     async def reload(self) -> None:
         """Re-read the active document from disk, keeping scroll (req 2.4)."""
@@ -146,14 +161,15 @@ class TabNavigator:
         await self._render_active(anchor=anchor)
 
     async def switch_to(self, index: int) -> None:
-        """Activate the tab at *index*, preserving scroll positions."""
+        """Activate the tab at *index*, preserving scroll and search state."""
         self._save_scroll()
+        self._stash_search()
         self._active = index
         state = self._states[index]
         tabs = self._app.query_one(Tabs)
         if tabs.active != state.tab_id:
             tabs.active = state.tab_id
-        await self._render_active(restore_scroll=True)
+        await self._render_active(restore_scroll=True, restore_search=True)
 
     def tab_next(self, tab_count: int | None) -> None:
         """Schedule a switch for ``gt`` / ``<N>gt``."""
@@ -215,7 +231,11 @@ class TabNavigator:
         await self._render_active(anchor=anchor)
 
     async def _render_active(
-        self, *, anchor: str | None = None, restore_scroll: bool = False
+        self,
+        *,
+        anchor: str | None = None,
+        restore_scroll: bool = False,
+        restore_search: bool = False,
     ) -> None:
         self._app.dismiss_search()
         state = self._states[self._active]
@@ -229,6 +249,22 @@ class TabNavigator:
             self._app.call_after_refresh(
                 lambda: viewer.scroll_to(y=scroll_y, animate=False)
             )
+        if restore_search and state.search_query is not None:
+            self._app.call_after_refresh(
+                self._app.restore_search, state.search_query, state.search_match_index
+            )
+
+    def _stash_search(self) -> None:
+        """Save the outgoing tab's search state (req U2, called before deactivation)."""
+        if not self._states:
+            return
+        snapshot = self._app.search_snapshot()
+        state = self._states[self._active]
+        if snapshot is None:
+            state.search_query = None
+            state.search_match_index = 0
+        else:
+            state.search_query, state.search_match_index = snapshot
 
     def _load_or_flash(
         self, path: Path, *, allow_large: bool = False

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from textual.widgets import Markdown
 
+from mokuji._document import load_document
 from mokuji._ui.app import MokujiApp
 from mokuji._ui.footer import TREE_HINTS, KeyGuide
 from mokuji._ui.sidebar import FilesTree, Sidebar, SidebarMode, TocTree
@@ -83,13 +84,25 @@ class TestPaneToggle:
             assert sidebar.display
             assert sidebar.mode is SidebarMode.FILES
 
-    async def test_e_closes_then_reopens_with_tree_focused(self, tmp_path):
+    async def test_e_is_focus_or_toggle_not_a_plain_toggle(self, tmp_path):
+        """e/t are focus-or-toggle (design.md §7), not a plain visibility toggle.
+
+        Launch state: sidebar visible, viewer focused. The first press
+        must focus the (already visible) tree rather than hiding a pane
+        the user can see but hasn't looked at yet; only a second press
+        (now that the tree has focus) hides it.
+        """
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
             sidebar = app.query_one(Sidebar)
+            assert isinstance(app.focused, ViewerPane)
+            await pilot.press("e")
+            assert sidebar.display
+            assert isinstance(app.focused, FilesTree)
             await pilot.press("e")
             assert not sidebar.display
+            assert isinstance(app.focused, ViewerPane)
             await pilot.press("e")
             assert sidebar.display
             assert isinstance(app.focused, FilesTree)
@@ -109,7 +122,7 @@ class TestPaneToggle:
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
-            await pilot.press("e", "e")
+            await pilot.press("e")
             assert isinstance(app.focused, FilesTree)
             await pilot.press("escape")
             assert isinstance(app.focused, ViewerPane)
@@ -154,7 +167,56 @@ class TestMarkdownFilter:
             assert "README.md" in names
             assert "assets" in names
             assert "script.py" not in names
-            assert "blob.bin" not in names
+
+    async def test_dot_entries_and_ignore_set_hidden_by_default(self, tmp_path):
+        make_workspace(tmp_path)
+        (tmp_path / ".venv").mkdir()
+        (tmp_path / ".github").mkdir()
+        (tmp_path / ".env").write_text("SECRET=1\n", encoding="utf-8")
+        (tmp_path / "node_modules").mkdir()
+        (tmp_path / "__pycache__").mkdir()
+        (tmp_path / "dist").mkdir()
+        (tmp_path / "build").mkdir()
+        (tmp_path / "target").mkdir()
+        (tmp_path / ".tox").mkdir()
+        (tmp_path / ".mypy_cache").mkdir()
+        (tmp_path / ".ruff_cache").mkdir()
+        (tmp_path / ".pytest_cache").mkdir()
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            names = root_names(app)
+            for hidden in (
+                ".venv",
+                ".github",
+                ".env",
+                "node_modules",
+                "__pycache__",
+                "dist",
+                "build",
+                "target",
+                ".tox",
+                ".mypy_cache",
+                ".ruff_cache",
+                ".pytest_cache",
+            ):
+                assert hidden not in names
+            assert "README.md" in names
+
+    async def test_show_all_reveals_dot_entries_and_ignore_set_but_not_git(
+        self, tmp_path
+    ):
+        make_workspace(tmp_path)
+        (tmp_path / ".venv").mkdir()
+        (tmp_path / "node_modules").mkdir()
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await show_all_files(pilot, app)
+            names = root_names(app)
+            assert ".venv" in names
+            assert "node_modules" in names
+            assert ".git" not in names
 
     async def test_dot_toggles_all_files_visible(self, tmp_path):
         app = make_app(tmp_path)
@@ -229,6 +291,99 @@ class TestMarkdownFilter:
             assert viewer.document is before
 
 
+async def type_query(pilot, query):
+    """Press each character of *query* into the just-opened footer input."""
+    for char in query:
+        await pilot.press(char)
+        await pilot.pause()
+
+
+class TestTypeToFilter:
+    async def test_slash_in_files_tree_filters_by_substring(self, tmp_path):
+        make_workspace(tmp_path)
+        (tmp_path / "docs").mkdir()
+        (tmp_path / "docs" / "guide.md").write_text("# Guide\n", encoding="utf-8")
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            tree = app.query_one(FilesTree)
+            tree.focus()
+            await pilot.pause()
+            await pilot.press("slash")
+            await pilot.pause()
+            await type_query(pilot, "guide")
+
+            assert root_names(app) == ["docs"]
+            docs_node = tree.root.children[0]
+            child_names = [
+                child.data.path.name for child in docs_node.children if child.data
+            ]
+            assert child_names == ["guide.md"]
+
+    async def test_escape_restores_the_full_tree(self, tmp_path):
+        make_workspace(tmp_path)
+        (tmp_path / "docs").mkdir()
+        (tmp_path / "docs" / "guide.md").write_text("# Guide\n", encoding="utf-8")
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            app.query_one(FilesTree).focus()
+            await pilot.pause()
+            await pilot.press("slash")
+            await pilot.pause()
+            await type_query(pilot, "guide")
+            assert root_names(app) == ["docs"]
+
+            await pilot.press("escape")
+            await pilot.pause()
+            names = root_names(app)
+            assert "README.md" in names
+            assert "docs" in names
+            assert isinstance(app.focused, FilesTree)
+
+    async def test_enter_keeps_filter_and_focuses_first_node(self, tmp_path):
+        make_workspace(tmp_path)
+        (tmp_path / "docs").mkdir()
+        (tmp_path / "docs" / "guide.md").write_text("# Guide\n", encoding="utf-8")
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            app.query_one(FilesTree).focus()
+            await pilot.pause()
+            await pilot.press("slash")
+            await pilot.pause()
+            await type_query(pilot, "guide")
+
+            await pilot.press("enter")
+            await pilot.pause()
+            assert isinstance(app.focused, FilesTree)
+            assert root_names(app) == ["docs"]
+
+    async def test_slash_in_toc_filters_headings_by_substring(self, tmp_path):
+        text = "# Alpha\n\n## Beta\n\n## Gamma\n"
+        (tmp_path / "README.md").write_text(text, encoding="utf-8")
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await pilot.press("t")
+            await pilot.pause()
+            toc = app.query_one(TocTree)
+            await pilot.press("slash")
+            await pilot.pause()
+            await type_query(pilot, "beta")
+
+            labels = [str(node.label).strip() for node in toc.root.children]
+            assert labels == ["Beta"]
+
+            await pilot.press("escape")
+            await pilot.pause()
+            labels = [str(node.label).strip() for node in toc.root.children]
+            assert labels == ["Alpha", "Beta", "Gamma"]
+
+    async def test_tree_hints_mention_filter_key(self):
+        assert any(key == "/" for key, _, _ in TREE_HINTS)
+
+
 class TestOpeningFiles:
     async def test_markdown_file_renders_markdown(self, tmp_path):
         app = make_app(tmp_path)
@@ -286,6 +441,22 @@ class TestOpeningFiles:
             await pilot.press("enter")
             await pilot.pause()
             assert app.query_one(Markdown) is not None
+
+    async def test_large_file_deleted_before_render_shows_generic_notice(
+        self, tmp_path
+    ):
+        make_workspace(tmp_path)
+        big = tmp_path / "big.md"
+        big.write_bytes(b"# Big\n" + b"x" * (2 * 1024 * 1024))
+        document = load_document(big)
+        big.unlink()
+        app = MokujiApp(root=tmp_path, initial_file=tmp_path / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            viewer = app.query_one(ViewerPane)
+            await viewer.show_document(document)
+            notice = app.query_one(".notice")
+            assert "large file" in str(notice.render())
 
     async def test_enter_opens_file_and_focuses_viewer(self, tmp_path):
         make_workspace(tmp_path)
@@ -392,3 +563,15 @@ class TestNarrowTerminal:
             sidebar = app.query_one(Sidebar)
             assert sidebar.display
             assert sidebar.has_class("-overlay")
+
+    async def test_escape_in_narrow_overlay_dismisses_it(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(70, 20)) as pilot:
+            await pilot.pause()
+            await pilot.press("e")
+            sidebar = app.query_one(Sidebar)
+            assert sidebar.display
+            assert sidebar.has_class("-overlay")
+            await pilot.press("escape")
+            assert not sidebar.display
+            assert isinstance(app.focused, ViewerPane)
