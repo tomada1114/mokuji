@@ -39,3 +39,43 @@ def find_matches(text: str, query: str) -> tuple[Match, ...]:
         matches.append(Match(start=position, end=end, line=line))
         position = haystack.find(needle, end)
     return tuple(matches)
+
+
+def line_text_with_span(text: str, match: Match) -> tuple[str, int, int]:
+    """Return the full line containing *match* and the query's span within it.
+
+    ``Match.start``/``end`` are offsets into the whole document, not the
+    line, so callers that want to show the matched line (e.g. the
+    footer status) need the line's own text and a line-relative span.
+    """
+    line_start = text.rfind("\n", 0, match.start) + 1
+    line_end = text.find("\n", match.end)
+    if line_end == -1:
+        line_end = len(text)
+    return (
+        text[line_start:line_end],
+        match.start - line_start,
+        match.end - line_start,
+    )
+
+
+def windowed_excerpt(
+    line: str, start: int, end: int, *, max_chars: int
+) -> tuple[str, int, int]:
+    """Trim *line* to at most *max_chars*, keeping ``[start, end)`` visible.
+
+    Returns ``(excerpt, span_start, span_end)`` with the span re-based to
+    the excerpt's own coordinates. An ellipsis marks a cut edge; the
+    match is centered in the trimmed window when both edges are cut.
+    """
+    if len(line) <= max_chars:
+        return line, start, end
+    window = max(max_chars - (end - start), 0)
+    lead = window // 2
+    left = max(0, start - lead)
+    right = min(len(line), left + window)
+    left = max(0, right - window)
+    prefix = "…" if left > 0 else ""
+    suffix = "…" if right < len(line) else ""
+    excerpt = f"{prefix}{line[left:right]}{suffix}"
+    return excerpt, len(prefix) + (start - left), len(prefix) + (end - left)

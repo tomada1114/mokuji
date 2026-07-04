@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mokuji._search import Match, find_matches
+from mokuji._search import Match, find_matches, line_text_with_span, windowed_excerpt
 
 
 class TestFindMatches:
@@ -51,3 +51,51 @@ class TestFindMatches:
         match = Match(start=0, end=1, line=0)
         with pytest.raises(AttributeError):
             match.start = 5  # type: ignore[misc]
+
+
+class TestLineTextWithSpan:
+    def test_first_line_span_is_relative_to_line_start(self):
+        text = "hello world\n"
+        match = Match(start=6, end=11, line=0)
+        line, start, end = line_text_with_span(text, match)
+        assert (line, start, end) == ("hello world", 6, 11)
+
+    def test_later_line_span_is_relative_to_that_lines_start(self):
+        text = "alpha\nneedle here\nomega\n"
+        (match,) = find_matches(text, "needle")
+        line, start, end = line_text_with_span(text, match)
+        assert (line, start, end) == ("needle here", 0, 6)
+
+    def test_last_line_without_trailing_newline(self):
+        text = "alpha\nbeta"
+        match = Match(start=6, end=10, line=1)
+        line, start, end = line_text_with_span(text, match)
+        assert (line, start, end) == ("beta", 0, 4)
+
+
+class TestWindowedExcerpt:
+    def test_short_line_is_returned_verbatim(self):
+        excerpt, start, end = windowed_excerpt("hello world", 6, 11, max_chars=60)
+        assert (excerpt, start, end) == ("hello world", 6, 11)
+
+    def test_long_line_is_windowed_around_the_match(self):
+        line = "x" * 100 + "needle" + "y" * 100
+        excerpt, start, end = windowed_excerpt(line, 100, 106, max_chars=20)
+        assert excerpt.startswith("…")
+        assert excerpt.endswith("…")
+        assert excerpt[start:end] == "needle"
+        assert len(excerpt) <= 22
+
+    def test_match_near_line_start_has_no_leading_ellipsis(self):
+        line = "needle" + "y" * 100
+        excerpt, start, end = windowed_excerpt(line, 0, 6, max_chars=20)
+        assert not excerpt.startswith("…")
+        assert excerpt.endswith("…")
+        assert excerpt[start:end] == "needle"
+
+    def test_match_near_line_end_has_no_trailing_ellipsis(self):
+        line = "x" * 100 + "needle"
+        excerpt, start, end = windowed_excerpt(line, 100, 106, max_chars=20)
+        assert excerpt.startswith("…")
+        assert not excerpt.endswith("…")
+        assert excerpt[start:end] == "needle"

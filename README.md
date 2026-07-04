@@ -86,8 +86,9 @@ uvx mokuji
 
 - **Search highlighting in Markdown**: rendered Markdown has no public
   API for inline highlights, so mokuji jumps to matches and shows a
-  `match N/M · line L` counter in the footer instead. Plain-text files
-  get full inline highlighting.
+  `match N/M · line L · <matched line excerpt>` status in the footer
+  instead, with the query accented. Plain-text files get full inline
+  highlighting.
 - **Link following is mouse-driven**: Textual's Markdown widget has no
   per-link keyboard focus, so links are followed by clicking them.
   Keyboard navigation covers everything else.

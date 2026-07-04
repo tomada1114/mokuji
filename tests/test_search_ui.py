@@ -103,21 +103,41 @@ class TestSearchJumping:
             await search_for(pilot, "needle")
             footer = app.query_one(KeyGuide)
             assert "match 1/3" in str(footer.render())
+            assert "needle here" in str(footer.render())
             await pilot.press("n")
             await pilot.pause()
             assert "match 2/3" in str(footer.render())
+            assert "needle again" in str(footer.render())
             await pilot.press("N")
             await pilot.pause()
             assert "match 1/3" in str(footer.render())
+            assert "needle here" in str(footer.render())
 
-    async def test_status_line_hints_the_search_keys(self, tmp_path):
+    async def test_status_line_shows_matched_line_excerpt_accented(self, tmp_path):
+        """The footer status shows the matched line's text (req U4).
+
+        Markdown has no inline-highlight API (documented limitation), so
+        this excerpt — with the query span styled — is the only visual
+        feedback for a Markdown search; n/N and Esc stay documented in
+        the help modal instead of the footer.
+        """
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
             await search_for(pilot, "needle")
+            footer = app.query_one(KeyGuide)
+            status = str(footer.render())
+            assert "needle here" in status
+            assert footer.render().spans
+
+    async def test_bracket_in_matched_line_does_not_break_markup(self, tmp_path):
+        text = "# Title\n\na [link](x) with needle inside brackets\n"
+        app = make_app(tmp_path, text=text)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await search_for(pilot, "needle")
             status = str(app.query_one(KeyGuide).render())
-            assert "n/N next/prev" in status
-            assert "Esc clear" in status
+            assert "[link](x)" in status
 
 
 class TestSmartCase:

@@ -96,7 +96,7 @@ class KeyGuide(Static):
 
     def __init__(self, *, id: str | None = None) -> None:  # noqa: A002 — Textual's own widget id parameter name
         super().__init__(id=id)
-        self._default: str | tuple[TieredHint, ...] = CONTENT_HINTS
+        self._default: str | Content | tuple[TieredHint, ...] = CONTENT_HINTS
         self._flash_timer: Timer | None = None
 
     def on_mount(self) -> None:
@@ -108,12 +108,13 @@ class KeyGuide(Static):
         if self._flash_timer is None:
             self.update(self._render_default())
 
-    def set_default(self, value: str | tuple[TieredHint, ...] | None) -> None:
+    def set_default(self, value: str | Content | tuple[TieredHint, ...] | None) -> None:
         """Set the persistent footer text (``None`` restores the key hints).
 
-        *value* is either literal text (e.g. the search status) or a tiered
-        hint set that re-fits itself on resize. An in-flight flash keeps
-        the screen until its timer restores the (new) persistent text.
+        *value* is either literal text/``Content`` (e.g. the search
+        status) or a tiered hint set that re-fits itself on resize. An
+        in-flight flash keeps the screen until its timer restores the
+        (new) persistent text.
         """
         self._default = value if value is not None else CONTENT_HINTS
         if self._flash_timer is None:
@@ -127,18 +128,18 @@ class KeyGuide(Static):
         padded to the height of the hints it covers so the footer does not
         jump while the flash is up.
         """
-        padding = "\n" * self._render_default().count("\n")
+        padding = "\n" * str(self._render_default()).count("\n")
         self.update(Content(message + padding))
         if self._flash_timer is not None:
             self._flash_timer.stop()
         self._flash_timer = self.set_timer(FLASH_SECONDS, self._restore_default)
 
-    def _render_default(self) -> str:
-        if isinstance(self._default, str):
-            return self._default
-        # ``size`` is the content area, so padding is already excluded.
-        lines = wrap_hints(self._default, self.size.width)
-        return "\n".join(format_hints(line) for line in lines)
+    def _render_default(self) -> str | Content:
+        if isinstance(self._default, tuple):
+            # ``size`` is the content area, so padding is already excluded.
+            lines = wrap_hints(self._default, self.size.width)
+            return "\n".join(format_hints(line) for line in lines)
+        return self._default
 
     def _restore_default(self) -> None:
         self._flash_timer = None
