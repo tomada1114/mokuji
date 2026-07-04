@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - FILES pane: repository tree with `.git` hidden, non-Markdown
       entries dimmed, plain-text/binary/oversized-file handling
     - TOC pane built from H1–H4 headings with jump-to-heading
-    - Tabs with Vim semantics (`o`, `gt`/`gT`/`<N>gt`, `x`), duplicate
+    - Tabs with Vim semantics (`Enter`, `gt`/`gT`/`<N>gt`, `x`), duplicate
       detection, and per-tab scroll positions
     - Internal/external link following with per-tab jump history
       (`Ctrl+o`/`Ctrl+i`)
