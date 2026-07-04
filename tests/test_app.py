@@ -103,6 +103,28 @@ class TestScrolling:
             await pilot.press("b", "b")
             assert viewer.scroll_y == 0
 
+    async def test_ctrl_d_and_ctrl_u_alias_half_page_scroll(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            viewer = app.query_one(ViewerPane)
+            await pilot.press("ctrl+d")
+            half = viewer.scroll_y
+            assert 0 < half <= viewer.container_size.height
+            await pilot.press("ctrl+u")
+            assert viewer.scroll_y == 0
+
+    async def test_ctrl_f_and_ctrl_b_alias_full_page_scroll(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            viewer = app.query_one(ViewerPane)
+            await pilot.press("ctrl+f")
+            one_page = viewer.scroll_y
+            assert one_page > 0
+            await pilot.press("ctrl+b")
+            assert viewer.scroll_y == 0
+
 
 class TestKeySequenceMachine:
     async def test_lone_g_then_j_still_scrolls(self, tmp_path):
