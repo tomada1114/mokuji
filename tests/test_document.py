@@ -222,13 +222,23 @@ class TestResolveLink:
         target = resolve_link(base, "#caf%C3%A9")
         assert target == InternalLink(path=base.resolve(), anchor="café")
 
-    def test_traversal_never_escapes_filesystem_root(self, tmp_path):
-        base = tmp_path / "a.md"
+    def test_resolve_link_clamps_at_filesystem_root_not_project_root(self, tmp_path):
+        """resolve_link() has no project-root confinement (real contract).
+
+        ``Path.resolve()`` only prevents ``..`` from escaping the OS
+        filesystem root; it happily resolves outside any project
+        directory. Root confinement is enforced by the caller
+        (``app.follow_link``), not here.
+        """
+        project = tmp_path / "project"
+        project.mkdir()
+        base = project / "a.md"
         href = "../" * 100 + "etc/passwd"
         target = resolve_link(base, href)
         assert isinstance(target, InternalLink)
         assert ".." not in target.path.parts
         assert target.path.is_absolute()
+        assert not target.path.is_relative_to(project)
 
     def test_document_types_are_value_objects(self, tmp_path):
         base = (tmp_path / "a.md").resolve()

@@ -146,8 +146,11 @@ def load_document(path: Path, *, allow_large: bool = False) -> Document:
 def resolve_link(base: Path, href: str) -> LinkTarget:
     """Resolve a Markdown *href* found in the document at *base*.
 
-    Relative paths resolve against ``base.parent``; ``Path.resolve()``
-    clamps ``..`` traversal at the filesystem root.
+    Relative paths resolve against ``base.parent``. ``Path.resolve()``
+    only clamps ``..`` traversal at the filesystem root — it does
+    **not** confine the result to any project root. Callers that need
+    root confinement (mokuji's link-following does) must check the
+    resolved path themselves.
     """
     parts = urlsplit(href)
     if parts.scheme in {"http", "https"}:

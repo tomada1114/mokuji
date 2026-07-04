@@ -300,6 +300,9 @@ class MokujiApp(App[None]):
             self._open_external(target.url)
             return
         if isinstance(target, InternalLink):
+            if not target.path.is_relative_to(self._root):
+                self.flash(f"link outside project: {href}")
+                return
             if not target.path.exists():
                 self.flash(f"not found: {href}")
                 return

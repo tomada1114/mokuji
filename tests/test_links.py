@@ -81,6 +81,39 @@ class TestInternalLinks:
             viewer = app.query_one(ViewerPane)
             assert viewer.document.path.name == "README.md"
 
+    async def test_relative_link_outside_root_is_rejected(self, tmp_path):
+        project = tmp_path / "project"
+        project.mkdir()
+        (project / "README.md").write_text(
+            "# Title\n\n[outside](../outside.md)\n", encoding="utf-8"
+        )
+        (tmp_path / "outside.md").write_text("# Outside\n", encoding="utf-8")
+        app = MokujiApp(root=project, initial_file=project / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await click_link(pilot, app, "../outside.md")
+            footer = app.query_one(KeyGuide)
+            assert "outside project" in str(footer.render())
+            viewer = app.query_one(ViewerPane)
+            assert viewer.document is not None
+            assert viewer.document.path.name == "README.md"
+
+    async def test_absolute_link_outside_root_is_rejected(self, tmp_path):
+        project = tmp_path / "project"
+        project.mkdir()
+        (project / "README.md").write_text("# Title\n", encoding="utf-8")
+        outside = tmp_path / "outside.md"
+        outside.write_text("# Outside\n", encoding="utf-8")
+        app = MokujiApp(root=project, initial_file=project / "README.md")
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await click_link(pilot, app, str(outside))
+            footer = app.query_one(KeyGuide)
+            assert "outside project" in str(footer.render())
+            viewer = app.query_one(ViewerPane)
+            assert viewer.document is not None
+            assert viewer.document.path.name == "README.md"
+
 
 class TestAnchors:
     async def test_anchor_link_scrolls_within_document(self, tmp_path):
