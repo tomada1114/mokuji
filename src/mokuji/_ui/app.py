@@ -294,6 +294,10 @@ class MokujiApp(App[None]):
         """Open *path* in a new tab, focusing an existing tab if open."""
         await self._navigator.open_in_new_tab(path)
 
+    async def open_link(self, path: Path, *, anchor: str | None = None) -> None:
+        """Navigate to *path* in the current tab (never hijacks another tab)."""
+        await self._navigator.open_link(path, anchor=anchor)
+
     async def follow_link(self, href: str) -> None:
         """Follow a Markdown link per req 2.8."""
         document = self._navigator.active_document
@@ -310,7 +314,7 @@ class MokujiApp(App[None]):
             if not target.path.exists():
                 self.flash(f"not found: {href}")
                 return
-            await self.open_path(target.path, anchor=target.anchor)
+            await self.open_link(target.path, anchor=target.anchor)
             return
         self.flash(f"unsupported link: {href}")
 

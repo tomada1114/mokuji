@@ -67,6 +67,16 @@ class TabNavigator:
             return
         await self._navigate_current(resolved, anchor, allow_large=allow_large)
 
+    async def open_link(self, path: Path, *, anchor: str | None = None) -> None:
+        """Navigate to *path* within the CURRENT tab (Markdown link following).
+
+        Unlike :meth:`open_path` (used by tree/search opens), this never
+        switches to another tab that already has *path* open — Ctrl+o
+        must return to where the user was reading, not into some other
+        tab's history.
+        """
+        await self._navigate_current(path.resolve(), anchor)
+
     async def open_in_new_tab(self, path: Path) -> None:
         """Open *path* in a new tab, focusing an existing tab if open."""
         resolved = path.resolve()

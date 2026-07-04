@@ -49,6 +49,34 @@ class TestInternalLinks:
             assert viewer.document.path.name == "usage.md"
             assert app.tab_count == 1
 
+    async def test_link_to_file_open_elsewhere_stays_in_current_tab(self, tmp_path):
+        app = make_app(tmp_path)
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            # Open usage.md in a second tab, then switch back to README.md's tab.
+            await app.open_in_new_tab(tmp_path / "docs" / "usage.md")
+            await pilot.pause()
+            assert app.tab_count == 2
+            await app.open_in_new_tab(tmp_path / "README.md")
+            await pilot.pause()
+            assert app.active_tab_index == 0
+            viewer = app.query_one(ViewerPane)
+            assert viewer.document is not None
+            assert viewer.document.path.name == "README.md"
+
+            await click_link(pilot, app, "docs/usage.md")
+
+            assert app.tab_count == 2
+            assert app.active_tab_index == 0
+            assert viewer.document is not None
+            assert viewer.document.path.name == "usage.md"
+
+            await pilot.press("ctrl+o")
+            await pilot.pause()
+            assert app.active_tab_index == 0
+            assert viewer.document is not None
+            assert viewer.document.path.name == "README.md"
+
     async def test_ctrl_o_goes_back_and_ctrl_i_forward(self, tmp_path):
         app = make_app(tmp_path)
         async with app.run_test(size=(100, 24)) as pilot:
