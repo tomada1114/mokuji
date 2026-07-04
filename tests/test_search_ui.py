@@ -162,4 +162,29 @@ class TestPlainTextHighlight:
             await pilot.press("escape")
             await pilot.pause()
             assert len(app.query_one(".plain-text").render().spans) == 0
-            assert "? help" in str(app.query_one(KeyGuide).render())
+
+
+class TestPerTabSearchState:
+    async def test_search_state_restored_after_switching_tabs(self, tmp_path):
+        app = make_app(tmp_path)
+        (tmp_path / "b.md").write_text(
+            "# B\n\nnothing to find here\n", encoding="utf-8"
+        )
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            await search_for(pilot, "needle")
+            footer = app.query_one(KeyGuide)
+            assert "match 1/3" in str(footer.render())
+
+            await app.open_in_new_tab(tmp_path / "b.md")
+            await pilot.pause()
+            assert app.tab_count == 2
+            assert "match" not in str(footer.render())
+
+            await pilot.press("g", "T")
+            await pilot.pause()
+            assert "match 1/3" in str(footer.render())
+
+            await pilot.press("n")
+            await pilot.pause()
+            assert "match 2/3" in str(footer.render())

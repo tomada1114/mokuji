@@ -22,6 +22,8 @@ class TabState:
     history: list[tuple[Path, str | None]] = field(default_factory=list)
     history_index: int = 0
     scroll_y: float = 0.0
+    search_query: str | None = None
+    search_match_index: int = 0
 
 
 def tab_labels(paths: Sequence[Path]) -> list[str]:

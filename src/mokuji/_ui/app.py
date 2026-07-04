@@ -219,6 +219,14 @@ class MokujiApp(App[None]):
         """Drop any active search; called on every navigation."""
         self._search.dismiss()
 
+    def search_snapshot(self) -> tuple[str, int] | None:
+        """Return the active search's ``(query, index)``, if any (req U2)."""
+        return self._search.snapshot()
+
+    def restore_search(self, query: str, index: int) -> None:
+        """Re-run a stashed search against the newly rendered document (req U2)."""
+        self._search.restore(query, index)
+
     def on_descendant_focus(self, event: events.DescendantFocus) -> None:
         """Keep the footer hints matched to the focused region (req 2.7)."""
         footer = self.query_one(KeyGuide)

@@ -109,6 +109,31 @@ class SearchController:
         self._app.query_one(ViewerPane).clear_matches()
         self._app.query_one(KeyGuide).set_default(None)
 
+    def snapshot(self) -> tuple[str, int] | None:
+        """Return the active search's ``(query, index)``, or ``None``."""
+        if self._active is None:
+            return None
+        return (self._active.query, self._active.index)
+
+    def restore(self, query: str, index: int) -> None:
+        """Re-run *query* against the just-rendered document and resume at *index*.
+
+        Match tuples are never cached across renders (line numbers can
+        drift after a reload), so this recomputes them fresh. Silently
+        does nothing if *query* no longer matches (document changed).
+        """
+        viewer = self._app.query_one(ViewerPane)
+        document = viewer.document
+        if document is None:
+            return
+        matches = find_matches(document.text, query)
+        if not matches:
+            return
+        self._active = ActiveSearch(
+            query=query, matches=matches, index=min(index, len(matches) - 1)
+        )
+        self._show_current()
+
     def _step(self, delta: int) -> None:
         if self._active is None:
             return
